@@ -78,7 +78,7 @@ export default function App() {
   
   // Gemini Live Hook
   const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
-  const { connect, disconnect, isConnected, isConnecting, isSpeaking, transcript } = useGeminiLive(process.env.API_KEY || '', (text) => {});
+  const { connect, disconnect, isConnected, isConnecting, isSpeaking, transcript } = useGeminiLive(process.env.GEMINI_API_KEY || '', (text) => {});
 
   // Audio Analysis for Visuals
   const audioLevel = useAudioAnalyzer(liveStream);
@@ -137,12 +137,12 @@ export default function App() {
     setMode(AppMode.SAVING);
     try {
         // 检查API_KEY是否存在
-        if (!process.env.API_KEY) {
-            // 如果API_KEY不存在，直接跳转到GALLERY模式，避免应用崩溃
+        if (!process.env.GEMINI_API_KEY) {
+            // 如果GEMINI_API_KEY不存在，直接跳转到GALLERY模式，避免应用崩溃
             setTimeout(() => setMode(AppMode.GALLERY), 1500);
             return;
         }
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         const model = "gemini-3-flash-preview";
         
         const prompt = `
