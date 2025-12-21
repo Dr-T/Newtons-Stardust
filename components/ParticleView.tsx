@@ -3,47 +3,6 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ParticleSettings } from '../types';
 
-// --- TYPE DECLARATIONS ---
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      ambientLight: any;
-      pointLight: any;
-      group: any;
-      mesh: any;
-      lineLoop: any;
-      bufferGeometry: any;
-      lineBasicMaterial: any;
-      points: any;
-      sphereGeometry: any;
-      meshBasicMaterial: any;
-      meshStandardMaterial: any;
-      shaderMaterial: any;
-      tubeGeometry: any;
-    }
-  }
-}
-
-declare module 'react' {
-  namespace JSX {
-    interface IntrinsicElements {
-      ambientLight: any;
-      pointLight: any;
-      group: any;
-      mesh: any;
-      lineLoop: any;
-      bufferGeometry: any;
-      lineBasicMaterial: any;
-      points: any;
-      sphereGeometry: any;
-      meshBasicMaterial: any;
-      meshStandardMaterial: any;
-      shaderMaterial: any;
-      tubeGeometry: any;
-    }
-  }
-}
-
 // --- UTILITIES ---
 
 /**
@@ -364,10 +323,7 @@ export const ParticleView: React.FC<{ imageUrl: string, audioLevel: number, sett
   return (
     <div className="absolute inset-0 w-full h-full -z-10 bg-black">
       <Canvas camera={{ position: [0, 80, 120], fov: 45 }} dpr={[1, 2]}>
-        {/* 添加环境光以确保场景可见 */}
-        <ambientLight intensity={0.5} />
-        {/* 添加方向光增强视觉效果 */}
-        <directionalLight position={[10, 10, 5]} intensity={1} />
+        <ambientLight intensity={0.2} />
         <SolarSystem settings={props.settings} audioLevel={props.audioLevel} />
         <BackgroundStardust settings={props.settings} audioLevel={props.audioLevel} />
       </Canvas>

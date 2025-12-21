@@ -1,3 +1,5 @@
+import React from 'react';
+
 export enum AppMode {
   UPLOAD = 'UPLOAD',
   CHAT = 'CHAT',
@@ -39,4 +41,13 @@ export interface Memory {
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
+}
+
+export interface AIPersona {
+  id: string;
+  name: string;
+  roleDescription: string;
+  icon: React.ComponentType<any>;
+  systemInstruction: string;
+  color: string;
 }

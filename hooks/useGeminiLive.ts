@@ -1,11 +1,13 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
+import { ChatMessage } from '../types';
 
 export const useGeminiLive = (apiKey: string | undefined, onMessage: (text: string) => void) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState<{user: string, model: string}>({user: '', model: ''});
+  const [history, setHistory] = useState<ChatMessage[]>([]);
   
   // Store the active session object to close it properly
   const activeSessionRef = useRef<any>(null);
@@ -17,6 +19,9 @@ export const useGeminiLive = (apiKey: string | undefined, onMessage: (text: stri
   // Audio playback queue
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+
+  // Ref to track current turn transcript synchronously for history
+  const transcriptRef = useRef<{user: string, model: string}>({user: '', model: ''});
 
   // Helper: Decode Audio
   const decodeAudioData = async (data: Uint8Array, ctx: AudioContext) => {
@@ -56,7 +61,7 @@ export const useGeminiLive = (apiKey: string | undefined, onMessage: (text: stri
     return btoa(binary);
   };
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (customSystemInstruction: string) => {
     if (!apiKey) {
       console.error("No API key provided");
       return null;
@@ -66,6 +71,8 @@ export const useGeminiLive = (apiKey: string | undefined, onMessage: (text: stri
     await disconnect();
 
     setIsConnecting(true);
+    setHistory([]); // Reset history on new connection
+    transcriptRef.current = { user: '', model: '' };
 
     const ai = new GoogleGenAI({ apiKey });
     
@@ -81,7 +88,7 @@ export const useGeminiLive = (apiKey: string | undefined, onMessage: (text: stri
         const currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         streamRef.current = currentStream;
 
-        // PHYSICS CONTENT FROM OCR (Translated to Chinese to bias the model)
+        // Base Physics Context (Shared across all personas)
         const physicsContext = `
         知识库 (Knowledge Base):
         1. 开普勒第一定律 (Kepler's First Law): 所有行星绕太阳运动的轨道都是椭圆，太阳处在椭圆的一个焦点上。
@@ -105,25 +112,19 @@ export const useGeminiLive = (apiKey: string | undefined, onMessage: (text: stri
             LANGUAGE_MODE: SIMPLIFIED_CHINESE_ONLY (zh-CN)
             
             INSTRUCTIONS:
-            1. You MUST use Simplified Chinese (简体中文) for ALL text output and audio speech generation.
-            2. Do NOT use Traditional Chinese characters (e.g., use "体" not "體", "国" not "國").
-            3. Even if the user speaks English or another language, you must respond in Simplified Chinese.
+            1. 所有文本输出和语音生成必须使用简体中文。
+            2. 禁止使用繁体汉字（例如：使用“体”而非“體”，使用“国”而非“國”）。
+            3. 即使用户使用英语或其他语言交流，也必须使用简体中文进行回复。
             
-            ROLE:
-            You are a wise, Socratic Physics Tutor. 一位具备“苏格拉底风格”的物理助教，时而为好奇的“中世纪观星者”、时而为挑刺的“牛顿崇拜者”、时而为忙碌的“航天地面指挥官”。
-            
-            [PROTOCOL: START IMMEDIATELY]
-            The user has just connected. 
-            DO NOT WAIT for the user to speak. 
-            Your FIRST action is to GREET the user and ASK the FIRST QUESTION based on the context below.
-            
-            Style:
-            - Tone: Calm, mysterious, encouraging (like a cosmic guide), 语速稍快.
-            - Strategy: Ask guiding questions. Don't lecture.
-            
-            Example Opening: "你好！星辰已就位。试问：为何月亮高悬于天际，苹果却坠向地面？"
-            
-            Context: ${physicsContext}
+            General Rules:
+            1. 采用“苏格拉底式对话”，针对逻辑模糊、术语堆砌的地方，立即进行追问（例如：“为什么行星快慢会变？”或“苹果和月亮有什么关系？”）；针对逻辑跳跃（例如直接给出 F=GMm/r² 而没解释来源），通过启发式提问引导进行公式推导。
+            2. 在对话过程中，每次回复和追问保持简洁（不超过2个问题），重点在于逼‘用户’输出。
+            3. 整个会话情景需控制在 3-8 轮会话内结束，避免会话过长，最后一轮会话给出一句话点评（讲的很好/讲的太难懂…）。
+
+            CONTEXT:
+            ${physicsContext}
+
+            ${customSystemInstruction}
             `,
           },
           callbacks: {
@@ -175,14 +176,31 @@ export const useGeminiLive = (apiKey: string | undefined, onMessage: (text: stri
                 const serverContent = msg.serverContent;
                 if (serverContent) {
                     if (serverContent.outputTranscription?.text) {
-                        setTranscript(prev => ({ ...prev, model: prev.model + serverContent.outputTranscription.text }));
+                        const text = serverContent.outputTranscription.text;
+                        setTranscript(prev => ({ ...prev, model: prev.model + text }));
+                        transcriptRef.current.model += text;
                     }
                     if (serverContent.inputTranscription?.text) {
-                        setTranscript(prev => ({ ...prev, user: prev.user + serverContent.inputTranscription.text }));
+                        const text = serverContent.inputTranscription.text;
+                        setTranscript(prev => ({ ...prev, user: prev.user + text }));
+                        transcriptRef.current.user += text;
                     }
 
                     if (serverContent.turnComplete) {
-                         setTranscript(prev => ({ user: '', model: '' })); 
+                        // Save to history
+                        const userText = transcriptRef.current.user.trim();
+                        const modelText = transcriptRef.current.model.trim();
+
+                        if (userText || modelText) {
+                            setHistory(prev => [
+                                ...prev, 
+                                ...(userText ? [{ role: 'user', text: userText } as ChatMessage] : []),
+                                ...(modelText ? [{ role: 'model', text: modelText } as ChatMessage] : [])
+                            ]);
+                        }
+
+                        setTranscript({ user: '', model: '' });
+                        transcriptRef.current = { user: '', model: '' };
                     }
                 }
 
@@ -313,7 +331,8 @@ export const useGeminiLive = (apiKey: string | undefined, onMessage: (text: stri
     setIsConnecting(false);
     setIsSpeaking(false);
     setTranscript({user: '', model: ''});
+    transcriptRef.current = { user: '', model: '' };
   }, []);
 
-  return { connect, disconnect, isConnected, isConnecting, isSpeaking, transcript, stream: streamRef.current };
+  return { connect, disconnect, isConnected, isConnecting, isSpeaking, transcript, history, stream: streamRef.current };
 };
