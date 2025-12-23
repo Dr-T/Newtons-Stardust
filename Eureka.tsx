@@ -211,44 +211,91 @@ const MOCK_MEMORIES: Memory[] = [
 // --- Components ---
 
 // 1. Navigation & Layout
-const Layout = ({ children, activeView, setView }: { children: React.ReactNode, activeView: ViewState, setView: (v: ViewState) => void }) => (
-  <div className="flex flex-col h-screen bg-slate-950 text-white font-sans overflow-hidden">
-    {/* Header */}
-    <header className="flex items-center justify-between px-6 py-4 bg-slate-900/50 backdrop-blur-md border-b border-white/10">
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
-          <Atom className="w-5 h-5 text-white animate-spin" style={{ animationDuration: '3s' }} />
-        </div>
-        <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">
-          Eureka <span className="text-xs text-slate-400 font-normal tracking-wider">真理之眼</span>
-        </span>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-          <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
-          <span className="text-xs text-amber-400 font-bold">128 能量</span>
-        </div>
-        <div className="w-8 h-8 rounded-full bg-slate-700 overflow-hidden border border-slate-600">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Xiaoming" alt="User" />
-        </div>
-      </div>
-    </header>
+const Layout = ({ children, activeView, setView, userRole, setUserRole }: {
+  children: React.ReactNode,
+  activeView: ViewState,
+  setView: (v: ViewState) => void,
+  userRole: 'student' | 'teacher',
+  setUserRole: (r: 'student' | 'teacher') => void
+}) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    {/* Main Content */}
-    <main className="flex-1 overflow-y-auto relative">
-      {children}
-    </main>
+  return (
+    <div className="flex flex-col h-screen bg-slate-950 text-white font-sans overflow-hidden">
+      {/* Header */}
+      <header className="flex items-center justify-between px-6 py-4 bg-slate-900/50 backdrop-blur-md border-b border-white/10 z-50 relative">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
+            <Atom className="w-5 h-5 text-white animate-spin" style={{ animationDuration: '3s' }} />
+          </div>
+          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">
+            Eureka <span className="text-xs text-slate-400 font-normal tracking-wider">真理之眼</span>
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+            <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
+            <span className="text-xs text-amber-400 font-bold">128 能量</span>
+          </div>
 
-    {/* Bottom Nav */}
-    <nav className="h-16 bg-slate-900 border-t border-white/5 grid grid-cols-5 px-2">
-      <NavButton active={activeView === 'home'} onClick={() => setView('home')} icon={Target} label="任务" />
-      <NavButton active={activeView === 'practice'} onClick={() => setView('practice')} icon={Brain} label="修炼" />
-      <NavButton active={activeView === 'chat'} onClick={() => setView('chat')} icon={MessageSquare} label="灵犀" />
-      <NavButton active={activeView === 'gallery'} onClick={() => setView('gallery')} icon={Library} label="结晶" />
-      <NavButton active={activeView === 'dashboard'} onClick={() => setView('dashboard')} icon={BarChart3} label="大盘" />
-    </nav>
-  </div>
-);
+          {/* Avatar & Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="w-8 h-8 rounded-full bg-slate-700 overflow-hidden border border-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all"
+            >
+              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Xiaoming" alt="User" />
+            </button>
+
+            {isMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="px-4 py-2 border-b border-slate-800">
+                  <p className="text-xs text-slate-500">切换身份</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setUserRole('student');
+                    if (activeView === 'dashboard') setView('home');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-slate-800 flex items-center justify-between group"
+                >
+                  <span className={userRole === 'student' ? 'text-cyan-400 font-bold' : 'text-slate-300'}>学生版</span>
+                  {userRole === 'student' && <CheckCircle2 className="w-4 h-4 text-cyan-400" />}
+                </button>
+                <button
+                  onClick={() => {
+                    setUserRole('teacher');
+                    setView('dashboard');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-slate-800 flex items-center justify-between group"
+                >
+                  <span className={userRole === 'teacher' ? 'text-cyan-400 font-bold' : 'text-slate-300'}>教师版</span>
+                  {userRole === 'teacher' && <CheckCircle2 className="w-4 h-4 text-cyan-400" />}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto relative" onClick={() => setIsMenuOpen(false)}>
+        {children}
+      </main>
+
+      {/* Bottom Nav */}
+      {userRole === 'student' && (
+        <nav className="h-16 bg-slate-900 border-t border-white/5 grid grid-cols-3 px-2">
+          <NavButton active={activeView === 'home'} onClick={() => setView('home')} icon={Target} label="任务" />
+          <NavButton active={activeView === 'chat'} onClick={() => setView('chat')} icon={MessageSquare} label="灵犀" />
+          <NavButton active={activeView === 'gallery'} onClick={() => setView('gallery')} icon={Library} label="结晶" />
+        </nav>
+      )}
+    </div>
+  );
+};
 
 const NavButton = ({ active, onClick, icon: Icon, label }: any) => (
   <button
@@ -318,7 +365,7 @@ const HomeView = ({ onStartPractice, onNavigate }: { onStartPractice: () => void
       {/* Navigation Modules */}
       <div>
         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">探索更多</h3>
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <button
             onClick={() => onNavigate('/lesson')}
             className="bg-indigo-900/30 p-4 rounded-xl border border-indigo-500/30 hover:bg-indigo-900/50 transition-colors text-left group"
@@ -326,8 +373,18 @@ const HomeView = ({ onStartPractice, onNavigate }: { onStartPractice: () => void
             <div className="w-10 h-10 bg-indigo-500/20 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
               <Atom className="w-6 h-6 text-indigo-400" />
             </div>
-            <div className="text-white font-bold text-sm">万有引力</div>
-            <p className="text-xs text-slate-400 mt-1">互动式物理仿真课程</p>
+            <div className="text-white font-bold text-sm">Sandbox AI Lab</div>
+            <p className="text-xs text-slate-400 mt-1">互动式沙盒仿真课程</p>
+          </button>
+          <button
+            onClick={() => onNavigate('/stardust')}
+            className="bg-purple-900/30 p-4 rounded-xl border border-purple-500/30 hover:bg-purple-900/50 transition-colors text-left group"
+          >
+            <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <Zap className="w-6 h-6 text-purple-400" />
+            </div>
+            <div className="text-white font-bold text-sm">Stardust AI Mentor</div>
+            <p className="text-xs text-slate-400 mt-1">沉浸式费曼学习伙伴</p>
           </button>
         </div>
       </div>
@@ -339,10 +396,10 @@ const HomeView = ({ onStartPractice, onNavigate }: { onStartPractice: () => void
 const LoadingView = ({ onComplete }: { onComplete: () => void }) => {
   const [activeStep, setActiveStep] = useState(0);
   const steps = [
-    '知识库提取',
-    '学习路径规划',
-    '交互场景生成',
-    '动态模型构建'
+    '正在提取知识库',
+    '交互场景生成中',
+    '动态模型构建中',
+    'AI导师已经就绪'
   ];
 
   useEffect(() => {
@@ -372,8 +429,12 @@ const LoadingView = ({ onComplete }: { onComplete: () => void }) => {
 
       <h2 className="text-2xl font-bold text-white mb-10 flex items-center gap-3 relative z-10">
         <Atom className="w-8 h-8 text-cyan-400 animate-spin" style={{ animationDuration: '4s' }} />
-        <span>AI 教学生成中...</span>
+        <span>互动式仿真课程生成中...</span>
       </h2>
+
+      <p className="text-slate-400 text-sm mb-8 relative z-10 -mt-6">
+        由 AI Agent 根据测评薄弱点、教学知识库生成互动式深潜学习内容
+      </p>
 
       <div className="space-y-6 relative z-10 pl-2">
         {steps.map((label, index) => {
@@ -508,20 +569,21 @@ const PracticeView = ({ questions, setQuestions, goBack, onFinish }: any) => {
         {/* Action Button */}
         {/* Action Bottom Sheet */}
         <div className="mt-auto pt-6 pb-2">
-          <div className="bg-indigo-900/20 border border-indigo-500/30 p-3 rounded-xl mb-4 flex items-start gap-3">
-            <Brain className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-indigo-200 leading-relaxed">
-              由AI根据测评薄弱点及教学知识库<br />生成交互式深潜学习内容
-            </p>
-          </div>
-
           <button
             onClick={onFinish}
             className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-xl text-white font-bold text-lg shadow-lg shadow-cyan-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
           >
-            前往学习
+            前往互动仿真课程
             <ChevronRight className="w-5 h-5" />
           </button>
+          <div className="bg-indigo-900/20 border border-indigo-500/30 p-3 rounded-xl mt-4 flex items-start gap-3">
+            <Brain className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-indigo-200 leading-relaxed">
+              由 AI Agent 根据测评薄弱点、教学知识库生成互动式深潜学习内容
+            </p>
+          </div>
+
+
         </div>
       </div>
     );
@@ -761,6 +823,7 @@ const DashboardView = () => {
 // --- Main App Entry ---
 
 export default function EurekaApp() {
+  const [userRole, setUserRole] = useState<'student' | 'teacher'>('student');
   const [activeView, setActiveView] = useState<ViewState>('home');
   const [questions, setQuestions] = useState<Question[]>(INITIAL_QUESTIONS);
   const [memories, setMemories] = useState<Memory[]>(MOCK_MEMORIES);
@@ -796,7 +859,7 @@ export default function EurekaApp() {
   };
 
   return (
-    <Layout activeView={activeView} setView={setActiveView}>
+    <Layout activeView={activeView} setView={setActiveView} userRole={userRole} setUserRole={setUserRole}>
       {activeView === 'home' && <HomeView onStartPractice={handleStartPractice} onNavigate={navigate} />}
       {activeView === 'practice' && (
         <PracticeView

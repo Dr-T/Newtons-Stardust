@@ -369,10 +369,12 @@ export default function StardustPage() {
         >
           <Orbit size={16} className="mr-2 text-blue-300" /> Stardust
         </button>
+        {/* 
         <div className="hidden md:flex space-x-8">
           <span className="cursor-pointer hover:text-white transition-colors">学习宇宙</span>
           <span className="cursor-pointer hover:text-white transition-colors" onClick={() => navigate('/', { state: { view: 'gallery' } })}>知识结晶</span>
         </div>
+        */}
         <div className="flex items-center space-x-4">
           <button onClick={toggleMusic}>
             {isPlayingMusic ? <Volume2 size={18} /> : <div className="w-[18px] h-[18px] border border-white/50 rounded-full flex items-center justify-center"><div className="w-[2px] h-full bg-white/50 rotate-45"></div></div>}
@@ -510,7 +512,7 @@ export default function StardustPage() {
               <div className="absolute inset-0 border-t-2 border-blue-400 rounded-full animate-spin"></div>
               <div className="absolute inset-2 border-r-2 border-purple-400 rounded-full animate-spin-reverse"></div>
             </div>
-            <h2 className="text-xl font-serif italic text-white mt-8 animate-pulse tracking-widest">正在评估运动法则...</h2>
+            <h2 className="text-xl font-serif italic text-white mt-8 animate-pulse tracking-widest">正在评估运动法则掌控程度...</h2>
             <p className="text-xs font-mono text-white/30 mt-2">计算评分中</p>
           </motion.div>
         )}

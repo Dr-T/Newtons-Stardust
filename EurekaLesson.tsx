@@ -110,10 +110,10 @@ type SimulationState = 'idle' | 'running' | 'crashed' | 'escaped';
 const LoadingView = ({ onComplete }: { onComplete: () => void }) => {
   const [activeStep, setActiveStep] = useState(0);
   const steps = [
-    '知识库提取中……',
-    '角色剧本生成中……',
-    'AI 角色已就位……',
-    '生成完毕'
+    '正在提取知识库',
+    '角色剧本生成中',
+    'AI 向导已就位',
+    '前往学习宇宙'
   ];
 
   useEffect(() => {
@@ -142,11 +142,11 @@ const LoadingView = ({ onComplete }: { onComplete: () => void }) => {
 
       <h2 className="text-2xl font-bold text-white mb-10 flex items-center gap-3 relative z-10">
         <Atom className="w-8 h-8 text-cyan-400 animate-spin" style={{ animationDuration: '4s' }} />
-        <span>学习宇宙生成中</span>
+        <span>费曼学习宇宙生成中</span>
       </h2>
 
       <p className="text-slate-400 text-sm mb-8 relative z-10 -mt-6">
-        根据知识点生成沉浸式学习宇宙、设定交互剧本
+        由 AI Agent 根据知识点生成沉浸式学习宇宙、设定费曼学习伙伴
       </p>
 
       <div className="space-y-6 relative z-10">
@@ -404,7 +404,7 @@ export default function GravityOrbitLesson() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-indigo-500/30">
+    <div className="fixed inset-0 overflow-y-auto bg-slate-950 text-white font-sans selection:bg-indigo-500/30">
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-white/10 px-6 py-4 flex items-center justify-between">
@@ -427,7 +427,7 @@ export default function GravityOrbitLesson() {
             onClick={() => setIsTransitioning(true)}
             className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold rounded-full shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all active:scale-95"
           >
-            <span>学习完毕</span>
+            <span>学习完毕，前往AI费曼评价</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
