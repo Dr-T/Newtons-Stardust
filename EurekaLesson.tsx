@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Atom, Check, Circle, ChevronRight } from 'lucide-react';
+
 
 // --- Inline Icons ---
 
 const IconWrapper = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     className={className}
   >
     {children}
@@ -95,31 +98,109 @@ const RotateCcw = ({ className }: { className?: string }) => (
 
 // Simplified Physics Scale
 // Earth Radius = 100 units (6400 km)
-const R_EARTH = 100; 
+const R_EARTH = 100;
 // First Cosmic Velocity = 7.9 km/s. In our scale, let's map 7.9 to 5.
-const V1 = 5; 
+const V1 = 5;
 // Second Cosmic Velocity = 11.2 km/s.
-const V2 = V1 * Math.sqrt(2); 
+const V2 = V1 * Math.sqrt(2);
 
 type SimulationState = 'idle' | 'running' | 'crashed' | 'escaped';
 
+
+const LoadingView = ({ onComplete }: { onComplete: () => void }) => {
+  const [activeStep, setActiveStep] = useState(0);
+  const steps = [
+    '知识库提取中……',
+    '角色剧本生成中……',
+    'AI 角色已就位……',
+    '生成完毕'
+  ];
+
+  useEffect(() => {
+    // Total 10 seconds, 4 steps -> 2.5s per step
+    const interval = setInterval(() => {
+      setActiveStep(prev => {
+        if (prev < steps.length) return prev + 1;
+        return prev;
+      });
+    }, 2500);
+
+    const totalTimer = setTimeout(() => {
+      onComplete();
+    }, 10000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(totalTimer);
+    };
+  }, [onComplete]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col justify-center items-center px-8">
+      {/* Background Ambient */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950 to-slate-950"></div>
+
+      <h2 className="text-2xl font-bold text-white mb-10 flex items-center gap-3 relative z-10">
+        <Atom className="w-8 h-8 text-cyan-400 animate-spin" style={{ animationDuration: '4s' }} />
+        <span>学习宇宙生成中</span>
+      </h2>
+
+      <p className="text-slate-400 text-sm mb-8 relative z-10 -mt-6">
+        根据知识点生成沉浸式学习宇宙、设定交互剧本
+      </p>
+
+      <div className="space-y-6 relative z-10">
+        {steps.map((label, index) => {
+          const status = index < activeStep ? 'done' : index === activeStep ? 'active' : 'pending';
+          return (
+            <div key={index} className="flex items-center gap-4">
+              <div className="w-6 flex justify-center">
+                {status === 'done' ? (
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/50">
+                    <Check className="w-3 h-3 text-emerald-400" />
+                  </div>
+                ) : status === 'active' ? (
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-cyan-400 blur mobile-pulse"></div>
+                    <div className="w-3 h-3 bg-cyan-400 rounded-full relative z-10 animate-pulse"></div>
+                  </div>
+                ) : (
+                  <div className="w-2 h-2 rounded-full bg-slate-700"></div>
+                )}
+              </div>
+              <span className={`text-lg font-medium transition-colors duration-300 ${status === 'pending' ? 'text-slate-600' :
+                status === 'active' ? 'text-cyan-400' : 'text-slate-300'
+                }`}>
+                {label} {status === 'active' && <span className="animate-pulse">...</span>}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 // --- Main Page Component ---
+
 export default function GravityOrbitLesson() {
+  const navigate = useNavigate();
   // State
   const [velocity, setVelocity] = useState(0); // km/s (mapped)
   const [simState, setSimState] = useState<SimulationState>('idle');
-  
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
   // Agent State
   const [isAiControlling, setIsAiControlling] = useState(false);
   const [aiMessage, setAiMessage] = useState("准备好了吗？让我们看看多快才能飞出地球！");
   const [challengeMode, setChallengeMode] = useState(false);
-  
+
   // Animation Refs
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number>(0);
   const satellitePos = useRef({ x: 0, y: -R_EARTH }); // Start at North Pole equivalent relative to center
   const angleRef = useRef(0);
-  const pathRef = useRef<{x: number, y: number}[]>([]);
+  const pathRef = useRef<{ x: number, y: number }[]>([]);
 
   // --- Physics Engine (Simplified) ---
   const updatePhysics = () => {
@@ -134,12 +215,12 @@ export default function GravityOrbitLesson() {
     // Simplified Animation Logic for Demo Visualization
     // We are animating based on "Launch Speed"
     const speedRatio = velocity / 7.9;
-    
+
     let newAngle = angleRef.current;
     let newRadius = R_EARTH;
-    
+
     // Angular velocity w = v / r (simplified for circular start)
-    const angularVelocity = (speedRatio * 0.05); 
+    const angularVelocity = (speedRatio * 0.05);
 
     if (velocity < 7.9) {
       // Crash Logic: Radius decreases
@@ -149,7 +230,7 @@ export default function GravityOrbitLesson() {
       satellitePos.current.y += decay; // Move towards center roughly
       satellitePos.current.x = Math.sin(newAngle) * (Math.abs(satellitePos.current.y));
       // Simple crash check
-      const dist = Math.sqrt(satellitePos.current.x**2 + satellitePos.current.y**2);
+      const dist = Math.sqrt(satellitePos.current.x ** 2 + satellitePos.current.y ** 2);
       if (dist < R_EARTH) {
         setSimState('crashed');
         setAiMessage("哎呀！速度太慢，卫星被万有引力拽回地球了！(v < 7.9 km/s)");
@@ -159,28 +240,28 @@ export default function GravityOrbitLesson() {
     } else if (Math.abs(velocity - 7.9) < 0.1) {
       // Circular Orbit
       newAngle -= angularVelocity;
-      satellitePos.current.x = Math.cos(newAngle - Math.PI/2) * (R_EARTH + 20); // +20 for altitude
-      satellitePos.current.y = Math.sin(newAngle - Math.PI/2) * (R_EARTH + 20);
+      satellitePos.current.x = Math.cos(newAngle - Math.PI / 2) * (R_EARTH + 20); // +20 for altitude
+      satellitePos.current.y = Math.sin(newAngle - Math.PI / 2) * (R_EARTH + 20);
     } else if (velocity < 11.2) {
       // Elliptical Orbit
       newAngle -= angularVelocity * (1 + 0.5 * Math.cos(newAngle)); // Keplers 2nd Law simulation (faster at perigee)
       // Ellipse logic approximation
       const eccentricity = (velocity - 7.9) / 5;
-      const r = (R_EARTH + 20) * (1 + eccentricity) / (1 + eccentricity * Math.cos(newAngle - Math.PI/2));
-      satellitePos.current.x = Math.cos(newAngle - Math.PI/2) * r;
-      satellitePos.current.y = Math.sin(newAngle - Math.PI/2) * r;
+      const r = (R_EARTH + 20) * (1 + eccentricity) / (1 + eccentricity * Math.cos(newAngle - Math.PI / 2));
+      satellitePos.current.x = Math.cos(newAngle - Math.PI / 2) * r;
+      satellitePos.current.y = Math.sin(newAngle - Math.PI / 2) * r;
     } else {
       // Escape
       newAngle -= angularVelocity;
       satellitePos.current.x += (satellitePos.current.x > 0 ? 2 : -2) * speedRatio;
       satellitePos.current.y -= 2 * speedRatio;
-       const dist = Math.sqrt(satellitePos.current.x**2 + satellitePos.current.y**2);
-       if (dist > 400) { // Screen bounds
-         setSimState('escaped');
-         setAiMessage("成功逃逸！它将飞向太阳系深处！(v ≥ 11.2 km/s)");
-         cancelAnimationFrame(requestRef.current!);
-         return;
-       }
+      const dist = Math.sqrt(satellitePos.current.x ** 2 + satellitePos.current.y ** 2);
+      if (dist > 400) { // Screen bounds
+        setSimState('escaped');
+        setAiMessage("成功逃逸！它将飞向太阳系深处！(v ≥ 11.2 km/s)");
+        cancelAnimationFrame(requestRef.current!);
+        return;
+      }
     }
 
     angleRef.current = newAngle;
@@ -222,26 +303,26 @@ export default function GravityOrbitLesson() {
     // Draw Trail
     ctx.beginPath();
     pathRef.current.forEach((p, i) => {
-        const alpha = i / pathRef.current.length;
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-        if (i === 0) ctx.moveTo(cx + p.x, cy + p.y);
-        else ctx.lineTo(cx + p.x, cy + p.y);
+      const alpha = i / pathRef.current.length;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+      if (i === 0) ctx.moveTo(cx + p.x, cy + p.y);
+      else ctx.lineTo(cx + p.x, cy + p.y);
     });
     ctx.stroke();
 
     // Draw Satellite
     // If idle, draw at launch pad (North Pole)
-    let sx = cx, sy = cy - R_EARTH; 
+    let sx = cx, sy = cy - R_EARTH;
     if (simState !== 'idle') {
-        sx = cx + satellitePos.current.x;
-        sy = cy + satellitePos.current.y;
+      sx = cx + satellitePos.current.x;
+      sy = cy + satellitePos.current.y;
     }
-    
+
     ctx.save();
     ctx.translate(sx, sy);
     // Rotate satellite to face movement direction roughly
     if (simState === 'running') {
-        // ctx.rotate(angleRef.current);
+      // ctx.rotate(angleRef.current);
     }
     ctx.fillStyle = '#f59e0b';
     ctx.beginPath();
@@ -268,15 +349,15 @@ export default function GravityOrbitLesson() {
   // --- Controls ---
   const launch = () => {
     if (velocity <= 0) {
-        setAiMessage("速度是 0 怎么飞？加油门啊！");
-        return;
+      setAiMessage("速度是 0 怎么飞？加油门啊！");
+      return;
     }
     setSimState('running');
     // Reset pos for new launch
     satellitePos.current = { x: 0, y: -(R_EARTH + 20) };
     angleRef.current = 0;
     pathRef.current = [];
-    
+
     if (velocity < 7.9) setAiMessage("发射！... 感觉速度不够啊...");
     else if (velocity < 11.2) setAiMessage("发射！进入环绕轨道！");
     else setAiMessage("发射！全速前进，脱离地球！");
@@ -296,237 +377,253 @@ export default function GravityOrbitLesson() {
     setChallengeMode(true);
     reset();
     setAiMessage("我要考考你：请把速度调整到“第一宇宙速度”，让卫星既不掉下来，也不飞走。");
-    
+
     // AI moves slider to random wrong position first
     setTimeout(() => {
-        setVelocity(4.5); 
-        setIsAiControlling(false);
+      setVelocity(4.5);
+      setIsAiControlling(false);
     }, 500);
   };
 
   const checkAnswer = () => {
-      if (Math.abs(velocity - 7.9) < 0.2) {
-          setAiMessage("太棒了！7.9 km/s 正是第一宇宙速度。完美入轨！");
-          launch();
-          setTimeout(() => setChallengeMode(false), 3000);
-      } else if (velocity < 7.9) {
-          setAiMessage("太慢了！这会变成“高空抛物”的。再快点！");
-          launch();
-      } else {
-          setAiMessage("太快了！我们要环绕地球，不是去火星。慢一点！");
-          launch();
-      }
+    if (Math.abs(velocity - 7.9) < 0.2) {
+      setAiMessage("太棒了！7.9 km/s 正是第一宇宙速度。完美入轨！");
+      launch();
+      setTimeout(() => setChallengeMode(false), 3000);
+    } else if (velocity < 7.9) {
+      setAiMessage("太慢了！这会变成“高空抛物”的。再快点！");
+      launch();
+    } else {
+      setAiMessage("太快了！我们要环绕地球，不是去火星。慢一点！");
+      launch();
+    }
   };
+
+  if (isTransitioning) {
+    return <LoadingView onComplete={() => navigate('/stardust')} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-indigo-500/30">
-        
-        {/* Header */}
-        <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-white/10 px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-                <button className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                    <ArrowLeft className="w-5 h-5 text-slate-400" />
+
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-white/10 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/')}
+            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-400" />
+          </button>
+          <h1 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500">
+            星际航行：万有引力
+          </h1>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="text-xs text-slate-400 border border-slate-700 px-3 py-1 rounded-full">
+            必修二 / 第三章 天体运动
+          </div>
+          <button
+            onClick={() => setIsTransitioning(true)}
+            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold rounded-full shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all active:scale-95"
+          >
+            <span>学习完毕</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto p-6 space-y-12">
+
+        {/* Section 1: The Hook */}
+        <section className="text-center space-y-4 pt-8">
+          <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
+            卫星为什么不会掉下来？
+          </h2>
+          <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto">
+            300年前，牛顿在山上架起了一门大炮。<br />
+            他发现，只要炮弹飞得<span className="text-amber-400 font-bold">足够快</span>，地球就永远抓不住它。
+          </p>
+        </section>
+
+        {/* Section 2: Interactive Simulation (Newton's Cannon) */}
+        <section className="relative bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col md:flex-row">
+
+          {/* Visual Area */}
+          <div className="relative flex-1 h-[400px] md:h-[500px] bg-slate-950">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black"></div>
+            <canvas
+              ref={canvasRef}
+              width={600}
+              height={500}
+              className="absolute inset-0 w-full h-full"
+            />
+
+            {/* Status HUD */}
+            <div className="absolute top-4 left-4 space-y-2">
+              <div className="bg-slate-900/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-300">
+                状态: <span className={`font-bold ${simState === 'running' ? 'text-emerald-400' : simState === 'crashed' ? 'text-rose-400' : 'text-slate-400'}`}>
+                  {simState === 'idle' ? '准备发射' : simState === 'running' ? '飞行中' : simState === 'crashed' ? '坠毁' : '逃逸'}
+                </span>
+              </div>
+              <div className="bg-slate-900/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-300">
+                F引: <span className="font-mono text-amber-400">GMm/r²</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Control Panel */}
+          <div className="w-full md:w-80 bg-slate-800/50 backdrop-blur border-l border-slate-700 p-6 flex flex-col gap-6 relative">
+
+            {/* Agent Bubble */}
+            <div className="flex items-start gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${isAiControlling ? 'bg-amber-500 animate-bounce' : 'bg-indigo-600'}`}>
+                <Bot className="w-6 h-6 text-white" />
+              </div>
+              <div className="bg-slate-700/50 p-3 rounded-xl rounded-tl-none text-sm text-slate-200 border border-slate-600">
+                {aiMessage}
+              </div>
+            </div>
+
+            {/* Slider Control */}
+            <div className="space-y-4 mt-auto">
+              <div className="flex justify-between items-end">
+                <span className="text-sm font-bold text-slate-400 flex items-center gap-2">
+                  <Rocket className="w-4 h-4" /> 发射速度 (v)
+                </span>
+                <span className="text-2xl font-mono font-bold text-white">
+                  {velocity.toFixed(1)} <span className="text-sm text-slate-500">km/s</span>
+                </span>
+              </div>
+
+              <div className="relative pt-6">
+                {/* Ruler Marks */}
+                <div className="absolute top-0 left-0 right-0 flex justify-between text-[10px] text-slate-500 font-mono px-1">
+                  <span>0</span>
+                  <span className="text-emerald-400 font-bold">7.9</span>
+                  <span className="text-amber-400 font-bold">11.2</span>
+                  <span>16.7</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="13"
+                  step="0.1"
+                  value={velocity}
+                  onChange={(e) => setVelocity(parseFloat(e.target.value))}
+                  disabled={simState === 'running' || isAiControlling}
+                  className={`w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all ${isAiControlling ? 'accent-amber-500' : ''}`}
+                />
+                {/* Key Velocity Markers on Slider Track */}
+                <div className="absolute top-7 left-[60.7%] w-0.5 h-3 bg-emerald-500/50 -translate-x-1/2" title="第一宇宙速度"></div>
+                <div className="absolute top-7 left-[86.1%] w-0.5 h-3 bg-amber-500/50 -translate-x-1/2" title="第二宇宙速度"></div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              {challengeMode ? (
+                <button
+                  onClick={checkAnswer}
+                  disabled={simState === 'running'}
+                  className="col-span-2 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/20"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  确认发射
                 </button>
-                <h1 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500">
-                    星际航行：万有引力
-                </h1>
+              ) : (
+                <>
+                  <button
+                    onClick={simState === 'running' ? reset : launch}
+                    className={`py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${simState === 'running' ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/20'}`}
+                  >
+                    {simState === 'running' ? <RotateCcw className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
+                    {simState === 'running' ? '重置' : '发射'}
+                  </button>
+                  <button
+                    onClick={startChallenge}
+                    className="py-3 bg-amber-600/10 hover:bg-amber-600/20 text-amber-500 border border-amber-500/30 rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
+                  >
+                    <Bot className="w-4 h-4" />
+                    考考我
+                  </button>
+                </>
+              )}
             </div>
-            <div className="text-xs text-slate-400 border border-slate-700 px-3 py-1 rounded-full">
-                必修二 / 第三章 天体运动
-            </div>
-        </header>
+          </div>
+        </section>
 
-        <main className="max-w-4xl mx-auto p-6 space-y-12">
-
-            {/* Section 1: The Hook */}
-            <section className="text-center space-y-4 pt-8">
-                <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
-                    卫星为什么不会掉下来？
-                </h2>
-                <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto">
-                    300年前，牛顿在山上架起了一门大炮。<br/>
-                    他发现，只要炮弹飞得<span className="text-amber-400 font-bold">足够快</span>，地球就永远抓不住它。
-                </p>
-            </section>
-
-            {/* Section 2: Interactive Simulation (Newton's Cannon) */}
-            <section className="relative bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col md:flex-row">
-                
-                {/* Visual Area */}
-                <div className="relative flex-1 h-[400px] md:h-[500px] bg-slate-950">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black"></div>
-                    <canvas 
-                        ref={canvasRef} 
-                        width={600} 
-                        height={500} 
-                        className="absolute inset-0 w-full h-full"
-                    />
-                    
-                    {/* Status HUD */}
-                    <div className="absolute top-4 left-4 space-y-2">
-                         <div className="bg-slate-900/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-300">
-                            状态: <span className={`font-bold ${simState === 'running' ? 'text-emerald-400' : simState === 'crashed' ? 'text-rose-400' : 'text-slate-400'}`}>
-                                {simState === 'idle' ? '准备发射' : simState === 'running' ? '飞行中' : simState === 'crashed' ? '坠毁' : '逃逸'}
-                            </span>
-                         </div>
-                         <div className="bg-slate-900/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-300">
-                            F引: <span className="font-mono text-amber-400">GMm/r²</span>
-                         </div>
-                    </div>
-                </div>
-
-                {/* Control Panel */}
-                <div className="w-full md:w-80 bg-slate-800/50 backdrop-blur border-l border-slate-700 p-6 flex flex-col gap-6 relative">
-                    
-                    {/* Agent Bubble */}
-                    <div className="flex items-start gap-3">
-                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${isAiControlling ? 'bg-amber-500 animate-bounce' : 'bg-indigo-600'}`}>
-                            <Bot className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="bg-slate-700/50 p-3 rounded-xl rounded-tl-none text-sm text-slate-200 border border-slate-600">
-                            {aiMessage}
-                        </div>
-                    </div>
-
-                    {/* Slider Control */}
-                    <div className="space-y-4 mt-auto">
-                        <div className="flex justify-between items-end">
-                            <span className="text-sm font-bold text-slate-400 flex items-center gap-2">
-                                <Rocket className="w-4 h-4" /> 发射速度 (v)
-                            </span>
-                            <span className="text-2xl font-mono font-bold text-white">
-                                {velocity.toFixed(1)} <span className="text-sm text-slate-500">km/s</span>
-                            </span>
-                        </div>
-                        
-                        <div className="relative pt-6">
-                            {/* Ruler Marks */}
-                            <div className="absolute top-0 left-0 right-0 flex justify-between text-[10px] text-slate-500 font-mono px-1">
-                                <span>0</span>
-                                <span className="text-emerald-400 font-bold">7.9</span>
-                                <span className="text-amber-400 font-bold">11.2</span>
-                                <span>16.7</span>
-                            </div>
-                            <input 
-                                type="range" 
-                                min="0" 
-                                max="13" 
-                                step="0.1" 
-                                value={velocity}
-                                onChange={(e) => setVelocity(parseFloat(e.target.value))}
-                                disabled={simState === 'running' || isAiControlling}
-                                className={`w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all ${isAiControlling ? 'accent-amber-500' : ''}`}
-                            />
-                            {/* Key Velocity Markers on Slider Track */}
-                            <div className="absolute top-7 left-[60.7%] w-0.5 h-3 bg-emerald-500/50 -translate-x-1/2" title="第一宇宙速度"></div>
-                            <div className="absolute top-7 left-[86.1%] w-0.5 h-3 bg-amber-500/50 -translate-x-1/2" title="第二宇宙速度"></div>
-                        </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="grid grid-cols-2 gap-3">
-                        {challengeMode ? (
-                             <button 
-                                onClick={checkAnswer}
-                                disabled={simState === 'running'}
-                                className="col-span-2 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/20"
-                            >
-                                <Play className="w-4 h-4 fill-current" />
-                                确认发射
-                            </button>
-                        ) : (
-                            <>
-                                <button 
-                                    onClick={simState === 'running' ? reset : launch}
-                                    className={`py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${simState === 'running' ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/20'}`}
-                                >
-                                    {simState === 'running' ? <RotateCcw className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
-                                    {simState === 'running' ? '重置' : '发射'}
-                                </button>
-                                <button 
-                                    onClick={startChallenge}
-                                    className="py-3 bg-amber-600/10 hover:bg-amber-600/20 text-amber-500 border border-amber-500/30 rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
-                                >
-                                    <Bot className="w-4 h-4" />
-                                    考考我
-                                </button>
-                            </>
-                        )}
-                    </div>
-                </div>
-            </section>
-
-            {/* Section 3: Theory & Formulas */}
-            <section className="grid md:grid-cols-2 gap-8 items-start">
-                <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-6">
-                    <div className="flex items-center gap-2 text-indigo-400">
-                        <Telescope className="w-5 h-5" />
-                        <span className="font-bold uppercase tracking-wider text-sm">宇宙速度阶梯</span>
-                    </div>
-                    
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-800/50 transition-colors border-l-4 border-emerald-500">
-                            <div className="text-2xl font-black text-white w-12 text-center">v₁</div>
-                            <div>
-                                <div className="text-emerald-400 font-bold">7.9 km/s</div>
-                                <div className="text-xs text-slate-400">第一宇宙速度 (环绕速度)</div>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-800/50 transition-colors border-l-4 border-amber-500">
-                            <div className="text-2xl font-black text-white w-12 text-center">v₂</div>
-                            <div>
-                                <div className="text-amber-400 font-bold">11.2 km/s</div>
-                                <div className="text-xs text-slate-400">第二宇宙速度 (脱离速度)</div>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-800/50 transition-colors border-l-4 border-rose-500">
-                            <div className="text-2xl font-black text-white w-12 text-center">v₃</div>
-                            <div>
-                                <div className="text-rose-400 font-bold">16.7 km/s</div>
-                                <div className="text-xs text-slate-400">第三宇宙速度 (逃逸速度)</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-6">
-                    <div className="flex items-center gap-2 text-indigo-400">
-                        <Ruler className="w-5 h-5" />
-                        <span className="font-bold uppercase tracking-wider text-sm">核心公式推导</span>
-                    </div>
-                    
-                    <div className="space-y-6">
-                        <div className="bg-slate-950 p-4 rounded-xl border border-white/5">
-                            <p className="text-xs text-slate-500 mb-2">万有引力提供向心力</p>
-                            <div className="flex items-center justify-center text-lg md:text-xl font-mono text-white">
-                                G<span className="frac mx-1">Mm<span className="symbol">/</span>r²</span> = m<span className="frac mx-1">v²<span className="symbol">/</span>r</span>
-                            </div>
-                        </div>
-                        
-                        <div className="text-center text-slate-500 text-sm">↓ 约去 m 和 r，解出 v</div>
-
-                        <div className="bg-indigo-900/20 p-4 rounded-xl border border-indigo-500/30">
-                            <p className="text-xs text-indigo-300 mb-2">环绕速度公式</p>
-                            <div className="flex items-center justify-center text-2xl font-mono text-indigo-100 font-bold">
-                                v = <span className="mx-2">√</span><span className="border-t border-white inline-block pt-1">GM / r</span>
-                            </div>
-                        </div>
-                        <p className="text-xs text-slate-400 leading-relaxed">
-                            由此可见：轨道半径 <span className="font-mono text-white">r</span> 越小，需要的环绕速度 <span className="font-mono text-white">v</span> 就越大。近地卫星需要最大的发射速度。
-                        </p>
-                    </div>
-                </div>
-            </section>
-
-             {/* Footer Quiz */}
-             <div className="text-center pt-8 border-t border-slate-800">
-                <p className="text-slate-500 mb-4">学懂了吗？思考一下：</p>
-                <div className="inline-block bg-slate-800 px-6 py-3 rounded-full text-slate-300 hover:text-white transition-colors cursor-help">
-                    ❓ 如果我想发射一颗同步卫星，它的速度应该比 7.9 km/s 大还是小？
-                </div>
+        {/* Section 3: Theory & Formulas */}
+        <section className="grid md:grid-cols-2 gap-8 items-start">
+          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-6">
+            <div className="flex items-center gap-2 text-indigo-400">
+              <Telescope className="w-5 h-5" />
+              <span className="font-bold uppercase tracking-wider text-sm">宇宙速度阶梯</span>
             </div>
 
-        </main>
-    </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-800/50 transition-colors border-l-4 border-emerald-500">
+                <div className="text-2xl font-black text-white w-12 text-center">v₁</div>
+                <div>
+                  <div className="text-emerald-400 font-bold">7.9 km/s</div>
+                  <div className="text-xs text-slate-400">第一宇宙速度 (环绕速度)</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-800/50 transition-colors border-l-4 border-amber-500">
+                <div className="text-2xl font-black text-white w-12 text-center">v₂</div>
+                <div>
+                  <div className="text-amber-400 font-bold">11.2 km/s</div>
+                  <div className="text-xs text-slate-400">第二宇宙速度 (脱离速度)</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-800/50 transition-colors border-l-4 border-rose-500">
+                <div className="text-2xl font-black text-white w-12 text-center">v₃</div>
+                <div>
+                  <div className="text-rose-400 font-bold">16.7 km/s</div>
+                  <div className="text-xs text-slate-400">第三宇宙速度 (逃逸速度)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-6">
+            <div className="flex items-center gap-2 text-indigo-400">
+              <Ruler className="w-5 h-5" />
+              <span className="font-bold uppercase tracking-wider text-sm">核心公式推导</span>
+            </div>
+
+            <div className="space-y-6">
+              <div className="bg-slate-950 p-4 rounded-xl border border-white/5">
+                <p className="text-xs text-slate-500 mb-2">万有引力提供向心力</p>
+                <div className="flex items-center justify-center text-lg md:text-xl font-mono text-white">
+                  G<span className="frac mx-1">Mm<span className="symbol">/</span>r²</span> = m<span className="frac mx-1">v²<span className="symbol">/</span>r</span>
+                </div>
+              </div>
+
+              <div className="text-center text-slate-500 text-sm">↓ 约去 m 和 r，解出 v</div>
+
+              <div className="bg-indigo-900/20 p-4 rounded-xl border border-indigo-500/30">
+                <p className="text-xs text-indigo-300 mb-2">环绕速度公式</p>
+                <div className="flex items-center justify-center text-2xl font-mono text-indigo-100 font-bold">
+                  v = <span className="mx-2">√</span><span className="border-t border-white inline-block pt-1">GM / r</span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                由此可见：轨道半径 <span className="font-mono text-white">r</span> 越小，需要的环绕速度 <span className="font-mono text-white">v</span> 就越大。近地卫星需要最大的发射速度。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer Quiz */}
+        <div className="text-center pt-8 border-t border-slate-800">
+          <p className="text-slate-500 mb-4">学懂了吗？思考一下：</p>
+          <div className="inline-block bg-slate-800 px-6 py-3 rounded-full text-slate-300 hover:text-white transition-colors cursor-help">
+            ❓ 如果我想发射一颗同步卫星，它的速度应该比 7.9 km/s 大还是小？
+          </div>
+        </div>
+
+      </main>
+    </div >
   );
 }

@@ -1,24 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { MemoryGallery } from './components/MemoryGallery';
+import { Memory } from './types';
 
 // --- Icons (Inline SVGs to replace lucide-react and avoid runtime errors) ---
 
-const IconWrapper = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
+const IconWrapper = ({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     className={className}
+    style={style}
   >
     {children}
   </svg>
 );
 
-const Atom = ({ className }: { className?: string }) => (
-  <IconWrapper className={className}>
+const Atom = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+  <IconWrapper className={className} style={style}>
     <circle cx="12" cy="12" r="1" />
     <path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z" />
     <path d="M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z" />
@@ -96,10 +100,19 @@ const User = ({ className }: { className?: string }) => (
   </IconWrapper>
 );
 
+const Library = ({ className }: { className?: string }) => (
+  <IconWrapper className={className}>
+    <path d="m16 6 4 14" />
+    <path d="M12 6v14" />
+    <path d="M8 8v12" />
+    <path d="M4 4v16" />
+  </IconWrapper>
+);
+
 
 // --- Types & Mock Data ---
 
-type ViewState = 'home' | 'chat' | 'practice' | 'dashboard';
+type ViewState = 'home' | 'chat' | 'practice' | 'dashboard' | 'loading' | 'gallery';
 
 interface Question {
   id: number;
@@ -114,51 +127,84 @@ interface Question {
   feedback: string[]; // Specific feedback for errors
 }
 
-// Mock Data based on "化学公式学习.docx"
+// Mock Data based on "物理公式学习.docx"
 const INITIAL_QUESTIONS: Question[] = [
   {
     id: 1,
     type: 'concept',
     category: 'new',
-    question: '请填写物质的量的定义：一定数目____的集合体。',
-    answer: '微观粒子',
-    placeholder: '请输入...',
+    question: '开普勒第一定律：所有行星绕太阳运动的轨道都是____，太阳处在椭圆的一个焦点上。',
+    answer: '椭圆',
+    placeholder: '请输入形状名称',
     attempts: 0,
     status: 'pending',
-    feedback: ['提示：不是具体的原子或分子，是统称。', '提示：包含原子、分子、离子等。']
+    feedback: ['提示：不是圆，是另一种几何形状。', '提示：行星轨道的主要特征。']
   },
   {
     id: 2,
-    type: 'calculation',
+    type: 'formula',
     category: 'new',
-    question: '1mol氧气中约含有 ____ 个氧气分子。',
-    answer: '6.02×10^23',
-    placeholder: '科学计数法如 6.02×10^23',
+    question: '万有引力定律公式：F = G ____ / r²',
+    answer: 'Mm',
+    placeholder: '填写质量符号',
     attempts: 0,
     status: 'pending',
-    feedback: ['提示：这就是阿伏伽德罗常数的数值。', '提示：记住 6.02...']
+    feedback: ['提示：两个物体的质量乘积。', '提示：大M和小m。']
   },
   {
     id: 3,
-    type: 'formula',
-    category: 'review', // "本学期曾经错过3次及以上"
-    question: '气体摩尔体积计算公式：n = V / ____',
-    answer: 'Vm',
-    placeholder: '填写符号',
+    type: 'calculation',
+    category: 'review',
+    question: '若地球质量为M，半径为R，近地卫星的速度 v = √____',
+    answer: 'GM/R',
+    placeholder: '输入公式表达式',
     attempts: 0,
     status: 'pending',
-    feedback: ['提示：下标是m。', '提示：表示气体摩尔体积的符号。']
+    feedback: ['提示：万有引力提供向心力。', '提示：F=mv²/R。']
   },
   {
     id: 4,
     type: 'concept',
     category: 'new',
-    question: '摩尔质量的单位是 ____ (请用中文填写)',
-    answer: '克每摩尔',
-    placeholder: '例如：千克每米',
+    question: '卡文迪许通过____实验测出了引力常量G的数值。',
+    answer: '扭秤',
+    placeholder: '请输入实验名称',
     attempts: 0,
     status: 'pending',
-    feedback: ['提示：质量(g)除以物质的量(mol)。', '提示：g/mol的中文读法。']
+    feedback: ['提示：利用微小形变放大的原理。', '提示：一种精密的力学实验装置。']
+  }
+];
+
+const MOCK_MEMORIES: Memory[] = [
+  {
+    id: 'mock-circular',
+    chapter: '必修二第六章《圆周运动》',
+    date: '10/24',
+    title: '圆周运动：向心力的华尔兹',
+    content: '绳子断裂的那一刻，石头选择了切线方向的自由。向心力不再是束缚，而是维持圆舞曲的必要张力。',
+    duration: '08:45',
+    status: 'review_needed',
+    assessment: {
+      formulaUnderstanding: 92,
+      logicRigor: 88,
+      application: 85,
+      advice: '重点复习"圆锥摆"和"火车转弯"模型。建议完成课本P23页第4题，并尝试画出汽车过拱桥时的受力分析图，明确向心力的来源（合力方向）。'
+    }
+  },
+  {
+    id: 'mock-projectile',
+    chapter: '必修二第五章《抛体运动》',
+    date: '10/18',
+    title: '抛体运动：重力的乐章',
+    content: '水平方向的匀速与垂直方向的加速完美正交。伽利略是对的，运动是可以分解的独立乐章。',
+    duration: '12:10',
+    status: 'mastered',
+    assessment: {
+      formulaUnderstanding: 95,
+      logicRigor: 90,
+      application: 92,
+      advice: '回顾"运动合成与分解"矢量法则。尝试推导斜抛运动射程公式，并思考为何45度角射程最远。推荐做一道"平抛撞击斜面"的经典习题。'
+    }
   }
 ];
 
@@ -194,17 +240,18 @@ const Layout = ({ children, activeView, setView }: { children: React.ReactNode, 
     </main>
 
     {/* Bottom Nav */}
-    <nav className="h-16 bg-slate-900 border-t border-white/5 grid grid-cols-4 px-2">
+    <nav className="h-16 bg-slate-900 border-t border-white/5 grid grid-cols-5 px-2">
       <NavButton active={activeView === 'home'} onClick={() => setView('home')} icon={Target} label="任务" />
       <NavButton active={activeView === 'practice'} onClick={() => setView('practice')} icon={Brain} label="修炼" />
       <NavButton active={activeView === 'chat'} onClick={() => setView('chat')} icon={MessageSquare} label="灵犀" />
+      <NavButton active={activeView === 'gallery'} onClick={() => setView('gallery')} icon={Library} label="结晶" />
       <NavButton active={activeView === 'dashboard'} onClick={() => setView('dashboard')} icon={BarChart3} label="大盘" />
     </nav>
   </div>
 );
 
 const NavButton = ({ active, onClick, icon: Icon, label }: any) => (
-  <button 
+  <button
     onClick={onClick}
     className={`flex flex-col items-center justify-center gap-1 transition-all duration-300 ${active ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
   >
@@ -214,7 +261,7 @@ const NavButton = ({ active, onClick, icon: Icon, label }: any) => (
 );
 
 // 2. Home View (Mission Control)
-const HomeView = ({ onStartPractice }: { onStartPractice: () => void }) => {
+const HomeView = ({ onStartPractice, onNavigate }: { onStartPractice: () => void, onNavigate: (path: string) => void }) => {
   return (
     <div className="p-6 space-y-8">
       {/* Hero Card */}
@@ -223,13 +270,13 @@ const HomeView = ({ onStartPractice }: { onStartPractice: () => void }) => {
         <div className="relative z-10">
           <h2 className="text-2xl font-bold text-white mb-1">早安，小明</h2>
           <p className="text-slate-400 text-sm mb-6">根据艾宾浩斯曲线，今日你需要巩固 10 个知识点。</p>
-          
+
           <div className="flex items-end gap-2 mb-6">
             <span className="text-5xl font-black text-white">4</span>
             <span className="text-lg text-slate-400 mb-1">/ 10 待通关</span>
           </div>
 
-          <button 
+          <button
             onClick={onStartPractice}
             className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-xl font-bold shadow-lg shadow-cyan-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
           >
@@ -261,94 +308,221 @@ const HomeView = ({ onStartPractice }: { onStartPractice: () => void }) => {
           </div>
         </div>
       </div>
-      
+
       {/* Recommended Context */}
       <div className="bg-slate-900/80 p-4 rounded-xl border-l-4 border-cyan-500">
         <h4 className="text-white font-bold text-sm mb-1">正在学习章节</h4>
-        <p className="text-slate-400 text-xs">必修一 / 2.3 物质的量</p>
+        <p className="text-slate-400 text-xs">必修二 / 第六章 万有引力与航天</p>
+      </div>
+
+      {/* Navigation Modules */}
+      <div>
+        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">探索更多</h3>
+        <div className="grid grid-cols-1 gap-4">
+          <button
+            onClick={() => onNavigate('/lesson')}
+            className="bg-indigo-900/30 p-4 rounded-xl border border-indigo-500/30 hover:bg-indigo-900/50 transition-colors text-left group"
+          >
+            <div className="w-10 h-10 bg-indigo-500/20 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <Atom className="w-6 h-6 text-indigo-400" />
+            </div>
+            <div className="text-white font-bold text-sm">万有引力</div>
+            <p className="text-xs text-slate-400 mt-1">互动式物理仿真课程</p>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 2a. Loading View (AI Generation)
+const LoadingView = ({ onComplete }: { onComplete: () => void }) => {
+  const [activeStep, setActiveStep] = useState(0);
+  const steps = [
+    '知识库提取',
+    '学习路径规划',
+    '交互场景生成',
+    '动态模型构建'
+  ];
+
+  useEffect(() => {
+    // Total 8s, 4 steps -> 2s (2000ms) per step
+    const interval = setInterval(() => {
+      setActiveStep(prev => {
+        if (prev < steps.length) return prev + 1;
+        return prev;
+      });
+    }, 2000);
+
+    const totalTimer = setTimeout(() => {
+      onComplete();
+    }, 8000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(totalTimer);
+    };
+  }, []);
+
+  return (
+    <div className="h-full flex flex-col justify-center items-center bg-slate-950 px-8 relative overflow-hidden">
+      {/* Background Ambient */}
+      <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-cyan-500/20 blur-[100px] rounded-full"></div>
+      <div className="absolute bottom-[-10%] left-[-10%] w-64 h-64 bg-indigo-500/20 blur-[100px] rounded-full"></div>
+
+      <h2 className="text-2xl font-bold text-white mb-10 flex items-center gap-3 relative z-10">
+        <Atom className="w-8 h-8 text-cyan-400 animate-spin" style={{ animationDuration: '4s' }} />
+        <span>AI 教学生成中...</span>
+      </h2>
+
+      <div className="space-y-6 relative z-10 pl-2">
+        {steps.map((label, index) => {
+          const status = index < activeStep ? 'done' : index === activeStep ? 'active' : 'pending';
+          return (
+            <div key={index} className="flex items-center gap-4 relative">
+              {/* Connector Line */}
+              {index < steps.length - 1 && (
+                <div className={`absolute left-[11px] top-8 w-0.5 h-10 ${index < activeStep ? 'bg-emerald-500/50' : 'bg-slate-800'
+                  }`}></div>
+              )}
+
+              {/* Icon Status */}
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 shrink-0 transition-all duration-500 ${status === 'done' ? 'bg-emerald-500 border-emerald-500' :
+                status === 'active' ? 'bg-cyan-500/20 border-cyan-400' :
+                  'bg-slate-900 border-slate-700'
+                }`}>
+                {status === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                {status === 'active' && <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>}
+              </div>
+
+              {/* Text */}
+              <span className={`text-lg font-medium transition-colors duration-300 ${status === 'pending' ? 'text-slate-600' :
+                status === 'active' ? 'text-cyan-400' : 'text-slate-300'
+                }`}>
+                {label} {status === 'active' && <span className="animate-pulse">...</span>}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 };
 
 // 3. Practice View (Core Logic Engine)
-const PracticeView = ({ questions, setQuestions, goBack }: any) => {
+const PracticeView = ({ questions, setQuestions, goBack, onFinish }: any) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [inputValue, setInputValue] = useState('');
-  const [feedback, setFeedback] = useState<'idle' | 'correct' | 'wrong'>('idle');
-  const [showExplanation, setShowExplanation] = useState(false);
+  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+  const [isFinished, setIsFinished] = useState(false);
 
   const currentQ = questions[currentIndex];
-  const isFinished = currentIndex >= questions.length;
-
-  // Fuzzy matching for demo purposes
-  const checkAnswer = () => {
-    // Simple normalization: remove spaces, lowercase
-    const normalizedInput = inputValue.replace(/\s+/g, '').toLowerCase();
-    const normalizedAnswer = currentQ.answer.replace(/\s+/g, '').toLowerCase();
-    
-    // In a real app, use Levenshtein distance or backend validation
-    // For demo, we check simple inclusion or strict equality
-    const isCorrect = normalizedInput === normalizedAnswer || normalizedInput.includes(normalizedAnswer);
-
-    const newQuestions = [...questions];
-    const q = newQuestions[currentIndex];
-
-    if (isCorrect) {
-      setFeedback('correct');
-      // Logic from doc:
-      // 1. 1st try correct -> Pass
-      // 2. 1st fail, 2nd/3rd correct -> Pass
-      if (q.attempts < 2) {
-        q.status = 'passed';
-      } else {
-        // Logic: "错误前2次，正确第3次，视为不通关" -> It means they got it right eventually, but status is FAIL for the long term record.
-        q.status = 'failed'; 
-      }
-    } else {
-      setFeedback('wrong');
-      q.attempts += 1;
-      
-      // Logic: "错误3次，视为不通关"
-      if (q.attempts >= 3) {
-        q.status = 'failed';
-        setShowExplanation(true); // Force move on
-      }
-    }
-    setQuestions(newQuestions);
-  };
 
   const handleNext = () => {
-    // If correct or failed out (3 attempts), move next
-    if (feedback === 'correct' || currentQ.attempts >= 3) {
-      if (currentIndex < questions.length - 1) {
-        setCurrentIndex(prev => prev + 1);
-        setInputValue('');
-        setFeedback('idle');
-        setShowExplanation(false);
-      } else {
-        // Finished all available questions
-        setCurrentIndex(prev => prev + 1);
-      }
+    // Save current answer
+    setUserAnswers(prev => ({ ...prev, [currentQ.id]: inputValue }));
+
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+      setInputValue(''); // Clear input for next question
     } else {
-      // Retry same question
-      setInputValue('');
-      setFeedback('idle');
+      setIsFinished(true); // Finish practice
     }
   };
 
   if (isFinished) {
-    const passedCount = questions.filter((q:any) => q.status === 'passed').length;
+    // Calculate results
+    let correctCount = 0;
+    const wrongQuestions: any[] = [];
+
+    questions.forEach((q: Question) => {
+      const userAnswer = userAnswers[q.id] || '';
+      // Simple normalization
+      const normalizedInput = userAnswer.replace(/\s+/g, '').toLowerCase();
+      const normalizedAnswer = q.answer.replace(/\s+/g, '').toLowerCase();
+      const isCorrect = normalizedInput === normalizedAnswer || normalizedInput.includes(normalizedAnswer);
+
+      if (isCorrect) {
+        correctCount++;
+      } else {
+        wrongQuestions.push({ ...q, userAnswer });
+      }
+    });
+
     return (
-      <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-        <div className="w-24 h-24 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-full flex items-center justify-center mb-6 shadow-2xl shadow-cyan-500/30">
-          <CheckCircle2 className="w-12 h-12 text-white" />
+      <div className="h-full flex flex-col p-6 overflow-y-auto">
+        {/* Header */}
+        <div className="text-center mb-8 mt-4">
+          <h2 className="text-3xl font-bold text-white mb-2 tracking-wider">练习完成!</h2>
         </div>
-        <h2 className="text-3xl font-bold text-white mb-2">修炼完成</h2>
-        <p className="text-slate-400 mb-8">今日通关率: {Math.round((passedCount/questions.length)*100)}%</p>
-        <button onClick={goBack} className="px-8 py-3 bg-white/10 hover:bg-white/20 rounded-full text-white font-bold transition-colors">
-          返回主页
-        </button>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="bg-slate-900/80 p-6 rounded-2xl flex flex-col items-center justify-center border border-white/5 shadow-xl">
+            <span className="text-5xl font-black text-cyan-400 mb-2">{correctCount}</span>
+            <span className="text-slate-400 text-sm">答对题数</span>
+          </div>
+          <div className="bg-slate-900/80 p-6 rounded-2xl flex flex-col items-center justify-center border border-white/5 shadow-xl">
+            <span className="text-5xl font-black text-blue-500 mb-2">{questions.length}</span>
+            <span className="text-slate-400 text-sm">总题数</span>
+          </div>
+        </div>
+
+        {/* Wrong Answers Section */}
+        {wrongQuestions.length > 0 && (
+          <div className="space-y-4 mb-8">
+            <h3 className="text-lg font-bold text-white mb-4">错题回顾 (点击进入深度学习)</h3>
+            {wrongQuestions.map((q) => (
+              <div key={q.id} className="bg-slate-800/50 rounded-xl p-5 border border-rose-500/20 hover:border-rose-500/40 transition-colors">
+                <h4 className="text-white font-bold text-lg mb-3">
+                  {q.question.split('____').map((part: string, i: number, arr: string[]) => (
+                    <React.Fragment key={i}>
+                      {part}
+                      {i < arr.length - 1 && (
+                        <span className="inline-block min-w-[40px] border-b border-white/30 mx-1"></span>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </h4>
+                <div className="space-y-1">
+                  <p className="text-emerald-400 font-medium text-sm">
+                    正确答案: <span className="font-mono">{q.answer}</span>
+                  </p>
+                  <p className="text-slate-400 text-xs leading-relaxed">
+                    {q.feedback[0] || '请复习相关概念。'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {wrongQuestions.length === 0 && (
+          <div className="mb-8 p-6 bg-emerald-500/10 rounded-xl border border-emerald-500/30 text-center">
+            <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
+            <p className="text-emerald-400 font-bold text-lg">全对！太棒了！</p>
+            <p className="text-slate-400 text-xs mt-1">你的物理基础非常扎实。</p>
+          </div>
+        )}
+
+        {/* Action Button */}
+        {/* Action Bottom Sheet */}
+        <div className="mt-auto pt-6 pb-2">
+          <div className="bg-indigo-900/20 border border-indigo-500/30 p-3 rounded-xl mb-4 flex items-start gap-3">
+            <Brain className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-indigo-200 leading-relaxed">
+              由AI根据测评薄弱点及教学知识库<br />生成交互式深潜学习内容
+            </p>
+          </div>
+
+          <button
+            onClick={onFinish}
+            className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-xl text-white font-bold text-lg shadow-lg shadow-cyan-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+          >
+            前往学习
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     );
   }
@@ -361,9 +535,9 @@ const PracticeView = ({ questions, setQuestions, goBack }: any) => {
           <ChevronRight className="w-5 h-5 text-slate-400 rotate-180" />
         </button>
         <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
-          <div 
+          <div
             className="h-full bg-cyan-500 transition-all duration-500"
-            style={{ width: `${((currentIndex) / questions.length) * 100}%` }}
+            style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
           ></div>
         </div>
         <span className="text-xs text-slate-400 font-mono">{currentIndex + 1}/{questions.length}</span>
@@ -371,91 +545,49 @@ const PracticeView = ({ questions, setQuestions, goBack }: any) => {
 
       {/* Question Card */}
       <div className="flex-1 flex flex-col justify-center max-w-lg mx-auto w-full">
-        <div className="mb-2 flex items-center gap-2">
-            <span className={`text-[10px] px-2 py-0.5 rounded border ${currentQ.category === 'new' ? 'border-emerald-500/30 text-emerald-400' : 'border-rose-500/30 text-rose-400'}`}>
-                {currentQ.category === 'new' ? '新知' : '高频错题'}
-            </span>
-            <span className="text-[10px] px-2 py-0.5 rounded border border-slate-700 text-slate-400">
-                {currentQ.type === 'concept' ? '概念记忆' : currentQ.type === 'formula' ? '公式拼写' : '数值计算'}
-            </span>
+        <div className="mb-4 flex items-center gap-2">
+          <span className={`text-[10px] px-2 py-0.5 rounded border ${currentQ.category === 'new' ? 'border-emerald-500/30 text-emerald-400' : 'border-rose-500/30 text-rose-400'}`}>
+            {currentQ.category === 'new' ? '新知' : '高频错题'}
+          </span>
+          <span className="text-[10px] px-2 py-0.5 rounded border border-slate-700 text-slate-400">
+            {currentQ.type === 'concept' ? '概念记忆' : currentQ.type === 'formula' ? '公式拼写' : '数值计算'}
+          </span>
         </div>
-        
-        <h2 className="text-xl md:text-2xl font-bold text-white leading-relaxed mb-8">
-            {currentQ.question.split('____').map((part, i, arr) => (
-                <React.Fragment key={i}>
-                    {part}
-                    {i < arr.length - 1 && (
-                        <span className="inline-block min-w-[60px] border-b-2 border-cyan-500/50 mx-1"></span>
-                    )}
-                </React.Fragment>
-            ))}
+
+        <h2 className="text-xl md:text-2xl font-bold text-white leading-relaxed mb-12">
+          {currentQ.question.split('____').map((part: string, i: number, arr: string[]) => (
+            <React.Fragment key={i}>
+              {part}
+              {i < arr.length - 1 && (
+                <span className={`inline-block min-w-[80px] border-b-2 mx-1 transition-colors ${inputValue ? 'border-cyan-500 text-cyan-400' : 'border-slate-600'
+                  }`}>
+                  {inputValue && <span className="px-1 text-lg">{inputValue}</span>}
+                </span>
+              )}
+            </React.Fragment>
+          ))}
         </h2>
 
         {/* Input Area */}
-        <div className="relative mb-6">
-            <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder={currentQ.placeholder}
-                disabled={feedback === 'correct'}
-                className={`w-full bg-slate-800/50 border-2 ${feedback === 'wrong' ? 'border-rose-500' : feedback === 'correct' ? 'border-emerald-500' : 'border-slate-700 focus:border-cyan-500'} rounded-xl px-4 py-4 text-lg text-white placeholder-slate-500 outline-none transition-all`}
-            />
-            {feedback === 'correct' && (
-                <CheckCircle2 className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500" />
-            )}
-            {feedback === 'wrong' && (
-                <XCircle className="absolute right-4 top-1/2 -translate-y-1/2 text-rose-500" />
-            )}
-        </div>
-
-        {/* Feedback / Hint Area */}
-        <div className="min-h-[60px] mb-6">
-            {feedback === 'wrong' && currentQ.attempts < 3 && (
-                <div className="flex items-start gap-2 text-rose-400 bg-rose-500/10 p-3 rounded-lg text-sm animate-pulse">
-                    <Brain className="w-4 h-4 mt-0.5 shrink-0" />
-                    <p>{currentQ.feedback[currentQ.attempts - 1] || '再试一次，注意审题。'}</p>
-                </div>
-            )}
-            {currentQ.attempts >= 3 && feedback === 'wrong' && (
-                <div className="text-slate-300 bg-slate-800 p-3 rounded-lg text-sm">
-                    <p className="font-bold text-rose-400 mb-1">本题未通关</p>
-                    <p>正确答案：<span className="text-emerald-400 font-mono select-all">{currentQ.answer}</span></p>
-                </div>
-            )}
-            {feedback === 'correct' && (
-                 <div className="text-emerald-400 bg-emerald-500/10 p-3 rounded-lg text-sm flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <p>{currentQ.attempts === 0 ? '完美！一遍过！' : '不错，掌握了！'}</p>
-                </div>
-            )}
+        <div className="relative mb-12">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleNext()}
+            placeholder={currentQ.placeholder}
+            autoFocus
+            className="w-full bg-transparent border-b-2 border-slate-700 focus:border-cyan-500 rounded-none px-2 py-4 text-xl text-white placeholder-slate-600 outline-none transition-all text-center"
+          />
         </div>
 
         {/* Action Button */}
         <button
-            onClick={feedback === 'correct' || currentQ.attempts >= 3 ? handleNext : checkAnswer}
-            className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
-                feedback === 'correct' || currentQ.attempts >= 3
-                ? 'bg-slate-700 hover:bg-slate-600 text-white' 
-                : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/20'
-            }`}
+          onClick={handleNext}
+          className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-lg transition-all active:scale-95"
         >
-            {feedback === 'correct' || currentQ.attempts >= 3 ? (currentIndex < questions.length - 1 ? '下一题' : '查看结果') : '提交答案'}
+          {currentIndex < questions.length - 1 ? '下一题' : '完成，查看结果'}
         </button>
-
-        {/* Attempts Indicator logic from doc: "单日知识点作答次数限制：3次" */}
-        <div className="mt-4 flex justify-center gap-1">
-            {[1, 2, 3].map(i => (
-                <div 
-                    key={i} 
-                    className={`w-2 h-2 rounded-full ${
-                        i <= currentQ.attempts 
-                        ? 'bg-rose-500' 
-                        : 'bg-slate-800'
-                    }`}
-                />
-            ))}
-        </div>
       </div>
     </div>
   );
@@ -463,173 +595,201 @@ const PracticeView = ({ questions, setQuestions, goBack }: any) => {
 
 // 4. Chat View (Socratic AI)
 const ChatView = () => {
-    const [messages, setMessages] = useState([
-        { role: 'ai', content: '你好小明！我是阿伏伽德罗。今天刚学了“物质的量”，有什么想问我的吗？' }
-    ]);
-    const [input, setInput] = useState('');
-    const [isTyping, setIsTyping] = useState(false);
-    const scrollRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages] = useState([
+    { role: 'ai', content: '你好小明！我是艾萨克·牛顿。关于“万有引力”，你有什么想问我的吗？' }
+  ]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }, [messages]);
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages]);
 
-    const handleSend = () => {
-        if (!input.trim()) return;
-        const userMsg = input;
-        setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
-        setInput('');
-        setIsTyping(true);
+  const handleSend = () => {
+    if (!input.trim()) return;
+    const userMsg = input;
+    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setInput('');
+    setIsTyping(true);
 
-        // Simple Rule-based response for Demo
-        setTimeout(() => {
-            let aiResponse = '';
-            if (userMsg.includes('物质的量') && (userMsg.includes('什么') || userMsg.includes('定义'))) {
-                aiResponse = '物质的量是化学中一个非常重要的基本概念，用来表示微观粒子（如原子、分子、离子等）的数量多少。它是国际单位制的七个基本物理量之一，符号为 n，单位是 摩尔（mol）。';
-            } else if (userMsg.includes('用处') || userMsg.includes('为什么')) {
-                aiResponse = '这就好比我们去买米。米粒太小了（就像原子），我们不会一颗颗数着买，而是论“斤”或者论“袋”买。摩尔就是微观世界里的那个“袋子”，它把看不见摸不着的微观粒子，和我们能称量的宏观质量（克）联系起来了。';
-            } else if (userMsg.includes('公式')) {
-                 aiResponse = '目前我们主要掌握核心公式：n = N/NA (粒子数相关) 和 n = m/M (质量相关)。你想试试推导吗？';
-            } else {
-                aiResponse = '这是个好问题。关于这个概念，你可以试着联想一下生活中“打一打铅笔”或者“一箱苹果”的概念。';
-            }
-            
-            setMessages(prev => [...prev, { role: 'ai', content: aiResponse }]);
-            setIsTyping(false);
-        }, 1500);
-    };
+    // Simple Rule-based response for Demo
+    setTimeout(() => {
+      let aiResponse = '';
+      if (userMsg.includes('引力') && (userMsg.includes('什么') || userMsg.includes('定义'))) {
+        aiResponse = '万有引力是宇宙中任何两个物体之间存在的相互吸引力。它的公式是 F = G(Mm/r²)，意味着质量越大、距离越近，引力就越大。我就被苹果砸中过，从而顿悟了这个道理。';
+      } else if (userMsg.includes('开普勒') || userMsg.includes('定律')) {
+        aiResponse = '开普勒是我的前辈，他发现了行星运动的三大定律。其中第三定律告诉我们 T²/R³ = k，这为我推导万有引力定律奠定了基础。';
+      } else if (userMsg.includes('公式') || userMsg.includes('G')) {
+        aiResponse = '引力常量 G = 6.67×10⁻¹¹ N·m²/kg²，它是卡文迪许后来用扭秤实验测出来的。记得在计算天体质量时，这个常量非常关键。';
+      } else {
+        aiResponse = '这个问题很有趣。你可以试着站在巨人的肩膀上思考看看，或者问问我关于苹果和月亮的关系？';
+      }
 
-    return (
-        <div className="flex flex-col h-full bg-slate-950">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={scrollRef}>
-                {messages.map((m, i) => (
-                    <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`flex gap-3 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${m.role === 'ai' ? 'bg-indigo-600' : 'bg-slate-700'}`}>
-                                {m.role === 'ai' ? <Atom className="w-4 h-4 text-white" /> : <User className="w-4 h-4 text-white" />}
-                            </div>
-                            <div className={`p-3 rounded-2xl text-sm leading-relaxed ${
-                                m.role === 'ai' 
-                                ? 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700' 
-                                : 'bg-cyan-600 text-white rounded-tr-none'
-                            }`}>
-                                {m.content}
-                            </div>
-                        </div>
-                    </div>
-                ))}
-                {isTyping && (
-                    <div className="flex justify-start">
-                         <div className="flex gap-3 max-w-[85%]">
-                            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
-                                <Atom className="w-4 h-4 text-white" />
-                            </div>
-                            <div className="bg-slate-800 p-4 rounded-2xl rounded-tl-none border border-slate-700 flex gap-1">
-                                <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></div>
-                                <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-100"></div>
-                                <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-200"></div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+      setMessages(prev => [...prev, { role: 'ai', content: aiResponse }]);
+      setIsTyping(false);
+    }, 1500);
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-slate-950">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={scrollRef}>
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`flex gap-3 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${m.role === 'ai' ? 'bg-indigo-600' : 'bg-slate-700'}`}>
+                {m.role === 'ai' ? <Atom className="w-4 h-4 text-white" /> : <User className="w-4 h-4 text-white" />}
+              </div>
+              <div className={`p-3 rounded-2xl text-sm leading-relaxed ${m.role === 'ai'
+                ? 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700'
+                : 'bg-cyan-600 text-white rounded-tr-none'
+                }`}>
+                {m.content}
+              </div>
             </div>
-            <div className="p-4 bg-slate-900 border-t border-white/5">
-                <div className="flex gap-2">
-                    <input 
-                        type="text" 
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                        placeholder="向阿伏伽德罗提问..."
-                        className="flex-1 bg-slate-800 border border-slate-700 rounded-full px-4 py-3 text-white focus:border-cyan-500 outline-none placeholder-slate-500"
-                    />
-                    <button onClick={handleSend} className="w-12 h-12 bg-cyan-600 hover:bg-cyan-500 rounded-full flex items-center justify-center transition-colors">
-                        <Send className="w-5 h-5 text-white" />
-                    </button>
-                </div>
+          </div>
+        ))}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="flex gap-3 max-w-[85%]">
+              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
+                <Atom className="w-4 h-4 text-white" />
+              </div>
+              <div className="bg-slate-800 p-4 rounded-2xl rounded-tl-none border border-slate-700 flex gap-1">
+                <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-100"></div>
+                <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-200"></div>
+              </div>
             </div>
+          </div>
+        )}
+      </div>
+      <div className="p-4 bg-slate-900 border-t border-white/5">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            placeholder="向艾萨克·牛顿提问..."
+            className="flex-1 bg-slate-800 border border-slate-700 rounded-full px-4 py-3 text-white focus:border-cyan-500 outline-none placeholder-slate-500"
+          />
+          <button onClick={handleSend} className="w-12 h-12 bg-cyan-600 hover:bg-cyan-500 rounded-full flex items-center justify-center transition-colors">
+            <Send className="w-5 h-5 text-white" />
+          </button>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 // 5. Dashboard View (Teacher Data Loop)
 const DashboardView = () => {
-    // Mock Data based on Doc
-    const students = [
-        { name: '小明', id: '001', errorRate: 60, status: 'warning', weakPoint: '气体摩尔体积' },
-        { name: '张伟', id: '002', errorRate: 15, status: 'good', weakPoint: '-' },
-        { name: '李华', id: '003', errorRate: 45, status: 'attention', weakPoint: '阿伏伽德罗常数' },
-        { name: '韩梅梅', id: '004', errorRate: 80, status: 'warning', weakPoint: '物质的量浓度' },
-    ];
+  // Mock Data based on Doc
+  const students = [
+    { name: '小明', id: '001', errorRate: 60, status: 'warning', weakPoint: '黄金代换公式' },
+    { name: '张伟', id: '002', errorRate: 15, status: 'good', weakPoint: '-' },
+    { name: '李华', id: '003', errorRate: 45, status: 'attention', weakPoint: '近地/同步卫星判别' },
+    { name: '韩梅梅', id: '004', errorRate: 80, status: 'warning', weakPoint: '第一宇宙速度推导' },
+  ];
 
-    return (
-        <div className="p-6">
-            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                <BarChart3 className="w-6 h-6 text-cyan-500" />
-                教师端 · 15天阶段报告
-            </h2>
+  return (
+    <div className="p-6">
+      <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+        <BarChart3 className="w-6 h-6 text-cyan-500" />
+        教师端 · 15天阶段报告
+      </h2>
 
-            {/* Overall Stats */}
-            <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="bg-slate-800 p-4 rounded-xl border border-white/5">
-                    <p className="text-slate-400 text-xs mb-1">班级平均通关率</p>
-                    <p className="text-2xl font-bold text-emerald-400">82%</p>
-                </div>
-                <div className="bg-slate-800 p-4 rounded-xl border border-white/5">
-                    <p className="text-slate-400 text-xs mb-1">高频预警人数</p>
-                    <p className="text-2xl font-bold text-rose-400">3 <span className="text-sm text-slate-500">人</span></p>
-                </div>
-            </div>
-
-            {/* Student List */}
-            <div className="bg-slate-900 rounded-xl overflow-hidden border border-white/10">
-                <div className="p-4 border-b border-white/10 bg-slate-800/50">
-                    <h3 className="font-bold text-slate-300">学情预警名单</h3>
-                </div>
-                <div className="divide-y divide-white/5">
-                    {students.map((s) => (
-                        <div key={s.id} className="p-4 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-2 h-2 rounded-full ${s.status === 'warning' ? 'bg-rose-500 animate-pulse' : s.status === 'attention' ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
-                                <div>
-                                    <p className="text-white font-medium">{s.name}</p>
-                                    <p className="text-xs text-slate-500">薄弱点: {s.weakPoint}</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <p className={`font-bold ${s.errorRate >= 60 ? 'text-rose-400' : s.errorRate >= 40 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                                    {s.errorRate}%
-                                </p>
-                                <p className="text-[10px] text-slate-500">错误率</p>
-                            </div>
-                            {s.errorRate >= 60 && (
-                                <button className="ml-2 px-3 py-1 bg-rose-500/20 text-rose-400 text-xs rounded border border-rose-500/30 hover:bg-rose-500/30">
-                                    一键干预
-                                </button>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            </div>
-            
-            <div className="mt-4 p-4 bg-indigo-900/30 border border-indigo-500/30 rounded-xl">
-                 <h4 className="text-indigo-300 text-sm font-bold mb-2 flex items-center gap-2">
-                    <Brain className="w-4 h-4" /> 
-                    AI 分析建议
-                 </h4>
-                 <p className="text-xs text-slate-400 leading-relaxed">
-                    本周“气体摩尔体积” (2.2) 错误率偏高，建议在周五的习题课中重点安排关于“标准状况(STP)”条件限制的变式训练。
-                 </p>
-            </div>
+      {/* Overall Stats */}
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="bg-slate-800 p-4 rounded-xl border border-white/5">
+          <p className="text-slate-400 text-xs mb-1">班级平均通关率</p>
+          <p className="text-2xl font-bold text-emerald-400">82%</p>
         </div>
-    );
+        <div className="bg-slate-800 p-4 rounded-xl border border-white/5">
+          <p className="text-slate-400 text-xs mb-1">高频预警人数</p>
+          <p className="text-2xl font-bold text-rose-400">3 <span className="text-sm text-slate-500">人</span></p>
+        </div>
+      </div>
+
+      {/* Student List */}
+      <div className="bg-slate-900 rounded-xl overflow-hidden border border-white/10">
+        <div className="p-4 border-b border-white/10 bg-slate-800/50">
+          <h3 className="font-bold text-slate-300">学情预警名单</h3>
+        </div>
+        <div className="divide-y divide-white/5">
+          {students.map((s) => (
+            <div key={s.id} className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${s.status === 'warning' ? 'bg-rose-500 animate-pulse' : s.status === 'attention' ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+                <div>
+                  <p className="text-white font-medium">{s.name}</p>
+                  <p className="text-xs text-slate-500">薄弱点: {s.weakPoint}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={`font-bold ${s.errorRate >= 60 ? 'text-rose-400' : s.errorRate >= 40 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {s.errorRate}%
+                </p>
+                <p className="text-[10px] text-slate-500">错误率</p>
+              </div>
+              {s.errorRate >= 60 && (
+                <button className="ml-2 px-3 py-1 bg-rose-500/20 text-rose-400 text-xs rounded border border-rose-500/30 hover:bg-rose-500/30">
+                  一键干预
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 p-4 bg-indigo-900/30 border border-indigo-500/30 rounded-xl">
+        <h4 className="text-indigo-300 text-sm font-bold mb-2 flex items-center gap-2">
+          <Brain className="w-4 h-4" />
+          AI 分析建议
+        </h4>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          本周“第一宇宙速度”错误率偏高，建议在周五的习题课中重点安排关于“轨道半径 vs 地球半径”区别的辨析训练。
+        </p>
+      </div>
+    </div>
+  );
 };
+
+// --- Main App Entry ---
 
 // --- Main App Entry ---
 
 export default function EurekaApp() {
   const [activeView, setActiveView] = useState<ViewState>('home');
   const [questions, setQuestions] = useState<Question[]>(INITIAL_QUESTIONS);
+  const [memories, setMemories] = useState<Memory[]>(MOCK_MEMORIES);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Handle routing state from other pages (e.g., Stardust)
+  useEffect(() => {
+    if (location.state) {
+      const state = location.state as { view?: ViewState; newMemory?: Memory };
+
+      if (state.view) {
+        setActiveView(state.view);
+      }
+
+      if (state.newMemory) {
+        setMemories(prev => {
+          // Prevent duplicate addition if strict mode runs twice
+          if (prev.some(m => m.id === state.newMemory!.id)) return prev;
+          return [state.newMemory!, ...prev];
+        });
+
+        // Clear state to prevent re-adding on refresh (optional but good practice)
+        // navigate(location.pathname, { replace: true, state: {} }); 
+        // Note: Clearing state might reset view if we strictly rely on it, but here we set local state.
+        // We'll leave it for now to ensure it persists during the immediate transition.
+      }
+    }
+  }, [location.state]);
 
   const handleStartPractice = () => {
     setActiveView('practice');
@@ -637,10 +797,19 @@ export default function EurekaApp() {
 
   return (
     <Layout activeView={activeView} setView={setActiveView}>
-      {activeView === 'home' && <HomeView onStartPractice={handleStartPractice} />}
-      {activeView === 'practice' && <PracticeView questions={questions} setQuestions={setQuestions} goBack={() => setActiveView('home')} />}
+      {activeView === 'home' && <HomeView onStartPractice={handleStartPractice} onNavigate={navigate} />}
+      {activeView === 'practice' && (
+        <PracticeView
+          questions={questions}
+          setQuestions={setQuestions}
+          goBack={() => setActiveView('home')}
+          onFinish={() => setActiveView('loading')}
+        />
+      )}
+      {activeView === 'loading' && <LoadingView onComplete={() => navigate('/lesson')} />}
       {activeView === 'chat' && <ChatView />}
       {activeView === 'dashboard' && <DashboardView />}
+      {activeView === 'gallery' && <MemoryGallery memories={memories} onClose={() => setActiveView('home')} />}
     </Layout>
   );
 }

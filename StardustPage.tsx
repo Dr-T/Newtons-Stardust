@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ParticleView } from './components/ParticleView';
 import { MemoryGallery } from './components/MemoryGallery';
 import { ControlPanel } from './components/ControlPanel';
@@ -143,7 +144,8 @@ const MOCK_MEMORIES: Memory[] = [
   }
 ];
 
-export default function App() {
+export default function StardustPage() {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<AppMode>(AppMode.CHAT);
   const [imageUrl, setImageUrl] = useState<string>(COSMIC_TEXTURE_URL);
   const [particleSettings, setParticleSettings] = useState<ParticleSettings>(DEFAULT_SETTINGS);
@@ -152,16 +154,16 @@ export default function App() {
   const [memories, setMemories] = useState<Memory[]>(MOCK_MEMORIES);
   const [selectedPersona, setSelectedPersona] = useState<AIPersona>(PERSONAS[0]); // Default to Stargazer
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
-  
+
   // Session Timer
   const [durationSeconds, setDurationSeconds] = useState(0);
 
   // Audio Refs
   const musicAudioRef = useRef<HTMLAudioElement>(new Audio(DEMO_MUSIC_URL));
-  
+
   // Gemini Live Hook
   const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
-  const { connect, disconnect, isConnected, isConnecting, isSpeaking, transcript, history } = useGeminiLive(process.env.API_KEY, (text) => {});
+  const { connect, disconnect, isConnected, isConnecting, isSpeaking, transcript, history } = useGeminiLive(process.env.API_KEY, (text) => { });
 
   // Audio Analysis for Visuals
   const audioLevel = useAudioAnalyzer(liveStream);
@@ -177,11 +179,11 @@ export default function App() {
   useEffect(() => {
     let interval: number;
     if (isConnected) {
-        interval = window.setInterval(() => {
-            setDurationSeconds(prev => prev + 1);
-        }, 1000);
+      interval = window.setInterval(() => {
+        setDurationSeconds(prev => prev + 1);
+      }, 1000);
     } else {
-        // Stop timer when disconnected, but don't reset immediately if we are saving
+      // Stop timer when disconnected, but don't reset immediately if we are saving
     }
     return () => clearInterval(interval);
   }, [isConnected]);
@@ -189,13 +191,13 @@ export default function App() {
   // Update Music Volume dynamically
   useEffect(() => {
     if (musicAudioRef.current) {
-        musicAudioRef.current.volume = particleSettings.musicVolume;
+      musicAudioRef.current.volume = particleSettings.musicVolume;
     }
   }, [particleSettings.musicVolume]);
 
   const toggleRecording = async () => {
     if (isConnecting) return; // Prevent double clicks
-    
+
     if (isConnected) {
       disconnect();
       setLiveStream(null);
@@ -217,7 +219,7 @@ export default function App() {
       // Connect with specific Persona instructions
       const stream = await connect(selectedPersona.systemInstruction);
       if (stream) {
-          setLiveStream(stream);
+        setLiveStream(stream);
       }
     }
   };
@@ -227,11 +229,11 @@ export default function App() {
     setShowPersonaSelector(false);
     // If currently connected, we should disconnect so user can start fresh with new persona
     if (isConnected) {
-        disconnect();
-        setLiveStream(null);
+      disconnect();
+      setLiveStream(null);
     }
   };
-  
+
   const toggleMusic = () => {
     if (isPlayingMusic) {
       musicAudioRef.current.pause();
@@ -246,36 +248,36 @@ export default function App() {
   const handleSaveMemory = async () => {
     // Capture final session details before disconnect
     const currentDuration = formatDuration(durationSeconds);
-    
+
     // Construct conversation log
     const conversationLog = history.map(msg => `[${msg.role === 'user' ? 'Student' : 'Tutor'}]: ${msg.text}`).join('\n');
     // Add pending transcript if any
     let fullLog = conversationLog;
     if (transcript.user) fullLog += `\n[Student]: ${transcript.user}`;
     if (transcript.model) fullLog += `\n[Tutor]: ${transcript.model}`;
-    
+
     if (!fullLog.trim()) {
-        fullLog = "(No conversation detected)";
+      fullLog = "(No conversation detected)";
     }
 
     // Disconnect microphone and live session immediately
     if (isConnected) {
-        await disconnect();
-        setLiveStream(null);
+      await disconnect();
+      setLiveStream(null);
     }
 
     setMode(AppMode.SAVING);
     try {
-        // 检查API_KEY是否存在
-        if (!process.env.GEMINI_API_KEY) {
-            // 如果GEMINI_API_KEY不存在，直接跳转到GALLERY模式，避免应用崩溃
-            setTimeout(() => setMode(AppMode.GALLERY), 1500);
-            return;
-        }
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        const model = "gemini-3-flash-preview";
-        
-        const prompt = `
+      // 检查API_KEY是否存在
+      if (!process.env.GEMINI_API_KEY) {
+        // 如果GEMINI_API_KEY不存在，直接跳转到GALLERY模式，避免应用崩溃
+        setTimeout(() => navigate('/', { state: { view: 'gallery' } }), 1500);
+        return;
+      }
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const model = "gemini-3-flash-preview";
+
+      const prompt = `
           学生刚刚完成了一次关于万有引力和开普勒定律的费曼学习课程。
           导师角色: ${selectedPersona.name}
 
@@ -293,246 +295,248 @@ export default function App() {
 
           返回严格的JSON格式。所有文字内容必须使用简体中文(Simplified Chinese)。
         `;
-        
-        const response = await ai.models.generateContent({
-            model,
-            contents: prompt,
-            config: { 
-              responseMimeType: "application/json",
-              responseSchema: {
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              content: { type: Type.STRING },
+              assessment: {
                 type: Type.OBJECT,
                 properties: {
-                  title: { type: Type.STRING },
-                  content: { type: Type.STRING },
-                  assessment: {
-                    type: Type.OBJECT,
-                    properties: {
-                      formulaUnderstanding: { type: Type.NUMBER },
-                      logicRigor: { type: Type.NUMBER },
-                      application: { type: Type.NUMBER },
-                      advice: { type: Type.STRING },
-                    }
-                  }
+                  formulaUnderstanding: { type: Type.NUMBER },
+                  logicRigor: { type: Type.NUMBER },
+                  application: { type: Type.NUMBER },
+                  advice: { type: Type.STRING },
                 }
               }
             }
-        });
-        
-        const data = JSON.parse(response.text || "{}");
-        
-        const newMemory: Memory = {
-            id: Date.now().toString(),
-            chapter: '必修二第七章《万有引力》',
-            date: new Date().toLocaleDateString('zh-CN', {month:'2-digit', day:'2-digit'}),
-            title: data.title || "星际会话",
-            content: data.content || "群星对齐，揭示了运动的法则...",
-            duration: currentDuration,
-            status: 'review_needed', // Default to review needed for new sessions
-            assessment: data.assessment
-        };
-        
-        setMemories([newMemory, ...memories]);
-        setTimeout(() => setMode(AppMode.GALLERY), 1500); 
+          }
+        }
+      });
+
+      const data = JSON.parse(response.text || "{}");
+
+      const newMemory: Memory = {
+        id: Date.now().toString(),
+        chapter: '必修二第七章《万有引力》',
+        date: new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
+        title: data.title || "星际会话",
+        content: data.content || "群星对齐，揭示了运动的法则...",
+        duration: currentDuration,
+        status: 'review_needed', // Default to review needed for new sessions
+        assessment: data.assessment
+      };
+
+      // Redirect to Eureka Gallery with new memory
+      setTimeout(() => navigate('/', { state: { view: 'gallery', newMemory: newMemory } }), 1500);
 
     } catch (e) {
-        console.error("Save failed", e);
-        setMode(AppMode.CHAT);
+      console.error("Save failed", e);
+      setMode(AppMode.CHAT);
     }
   };
 
   useEffect(() => {
     return () => {
-        disconnect();
-        musicAudioRef.current.pause();
+      disconnect();
+      musicAudioRef.current.pause();
     };
   }, [disconnect]);
 
   return (
     <div className="relative w-screen h-screen bg-black text-white overflow-hidden selection:bg-white/20">
-      
+
       {/* Background Particle Layer */}
       <div className="absolute inset-0 z-0 opacity-100">
-           <ParticleView 
-              imageUrl={imageUrl} 
-              audioLevel={audioLevel} 
-              settings={particleSettings} 
-           />
+        <ParticleView
+          imageUrl={imageUrl}
+          audioLevel={audioLevel}
+          settings={particleSettings}
+        />
       </div>
 
       {/* Top Navigation */}
       <nav className="absolute top-0 left-0 w-full p-6 z-30 flex justify-between items-center text-xs tracking-[0.2em] font-light text-white/70 mix-blend-difference">
-         <div className="font-serif italic text-lg tracking-normal flex items-center">
-             <Orbit size={16} className="mr-2 text-blue-300"/> Stardust
-         </div>
-         <div className="hidden md:flex space-x-8">
-            <span className="cursor-pointer hover:text-white transition-colors">学习宇宙</span>
-            <span className="cursor-pointer hover:text-white transition-colors" onClick={() => setMode(AppMode.GALLERY)}>知识结晶</span>
-         </div>
-         <div className="flex items-center space-x-4">
-            <button onClick={toggleMusic}>
-                {isPlayingMusic ? <Volume2 size={18} /> : <div className="w-[18px] h-[18px] border border-white/50 rounded-full flex items-center justify-center"><div className="w-[2px] h-full bg-white/50 rotate-45"></div></div>}
-            </button>
-            <Menu size={18} />
-         </div>
+        <button
+          onClick={() => navigate('/')}
+          className="font-serif italic text-lg tracking-normal flex items-center hover:text-white transition-colors"
+        >
+          <Orbit size={16} className="mr-2 text-blue-300" /> Stardust
+        </button>
+        <div className="hidden md:flex space-x-8">
+          <span className="cursor-pointer hover:text-white transition-colors">学习宇宙</span>
+          <span className="cursor-pointer hover:text-white transition-colors" onClick={() => navigate('/', { state: { view: 'gallery' } })}>知识结晶</span>
+        </div>
+        <div className="flex items-center space-x-4">
+          <button onClick={toggleMusic}>
+            {isPlayingMusic ? <Volume2 size={18} /> : <div className="w-[18px] h-[18px] border border-white/50 rounded-full flex items-center justify-center"><div className="w-[2px] h-full bg-white/50 rotate-45"></div></div>}
+          </button>
+          <Menu size={18} />
+        </div>
       </nav>
 
       {/* Main Content Area */}
       <AnimatePresence>
         {mode === AppMode.CHAT && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-8"
           >
             {/* Status Pill & Persona Switcher */}
             <div className="w-full flex justify-center mt-16 pointer-events-auto relative">
-                <div 
-                    className={`
+              <div
+                className={`
                         flex items-center space-x-3 px-2 py-1.5 rounded-full border transition-all duration-300
                         ${isConnected ? 'bg-blue-900/30 border-blue-500/50' : 'bg-black/30 border-white/10'}
                         backdrop-blur-md
                     `}
-                >
-                    <div className="flex items-center space-x-2 px-2 border-r border-white/10 pr-3">
-                        <div className={`w-2 h-2 rounded-full ${
-                            isConnecting ? 'bg-amber-400 animate-spin' : 
-                            isConnected ? 'bg-blue-500 animate-pulse' : 'bg-white/30'
-                        }`}></div>
-                        <span className={`text-xs tracking-wider ${isConnected ? 'text-blue-200' : 'text-white/50'}`}>
-                            {isConnecting ? '正在呼叫...' : 
-                             isConnected ? (isSpeaking ? '导师讲解中' : '聆听中') : '离线'}
-                        </span>
-                    </div>
-
-                    {/* Active Persona Display */}
-                    <button 
-                        onClick={() => !isConnected && setShowPersonaSelector(true)}
-                        disabled={isConnected}
-                        className={`flex items-center space-x-2 pl-1 pr-3 py-0.5 rounded-full transition-colors ${isConnected ? 'opacity-50 cursor-default' : 'hover:bg-white/10 cursor-pointer'}`}
-                    >
-                         <selectedPersona.icon size={12} style={{ color: selectedPersona.color }} />
-                         <span className="text-[10px] font-mono uppercase tracking-widest text-white/80">
-                             {selectedPersona.name}
-                         </span>
-                         {!isConnected && <ChevronRight size={10} className="text-white/30" />}
-                    </button>
+              >
+                <div className="flex items-center space-x-2 px-2 border-r border-white/10 pr-3">
+                  <div className={`w-2 h-2 rounded-full ${isConnecting ? 'bg-amber-400 animate-spin' :
+                    isConnected ? 'bg-blue-500 animate-pulse' : 'bg-white/30'
+                    }`}></div>
+                  <span className={`text-xs tracking-wider ${isConnected ? 'text-blue-200' : 'text-white/50'}`}>
+                    {isConnecting ? '正在呼叫...' :
+                      isConnected ? (isSpeaking ? '导师讲解中' : '聆听中') : '离线'}
+                  </span>
                 </div>
+
+                {/* Active Persona Display */}
+                <button
+                  onClick={() => !isConnected && setShowPersonaSelector(true)}
+                  disabled={isConnected}
+                  className={`flex items-center space-x-2 pl-1 pr-3 py-0.5 rounded-full transition-colors ${isConnected ? 'opacity-50 cursor-default' : 'hover:bg-white/10 cursor-pointer'}`}
+                >
+                  <selectedPersona.icon size={12} style={{ color: selectedPersona.color }} />
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-white/80">
+                    {selectedPersona.name}
+                  </span>
+                  {!isConnected && <ChevronRight size={10} className="text-white/30" />}
+                </button>
+              </div>
             </div>
 
             {/* Subtitle Overlay (Replaces the old text area) */}
-            <SubtitleView 
-                userText={transcript.user}
-                modelText={transcript.model}
-                isModelSpeaking={isSpeaking}
+            <SubtitleView
+              userText={transcript.user}
+              modelText={transcript.model}
+              isModelSpeaking={isSpeaking}
             />
 
             {/* Bottom Controls */}
             <div className="w-full flex flex-col items-center space-y-8 pointer-events-auto mb-10">
-                
-                {/* Main Mic Button */}
-                <button 
-                    onClick={toggleRecording}
-                    disabled={isConnecting}
-                    className={`
-                        w-16 h-16 rounded-full flex items-center justify-center border transition-all duration-500 relative
-                        ${isConnected 
-                            ? 'bg-white text-black border-transparent scale-110 shadow-[0_0_30px_rgba(100,200,255,0.4)]' 
-                            : 'bg-black/40 text-white border-white/20 hover:bg-white/10 hover:border-white/50'}
-                    `}
-                    style={{
-                        boxShadow: isConnected ? `0 0 30px ${selectedPersona.color}66` : undefined
-                    }}
-                >
-                    {isConnecting ? (
-                        <Loader2 size={24} className="animate-spin text-white/70" />
-                    ) : isConnected ? (
-                        <div className="flex space-x-1 items-center h-4">
-                            {[1,2,3].map(i => (
-                                <div key={i} className="w-1 bg-black animate-bounce" style={{ height: 10 + Math.random() * 10 + 'px', animationDelay: i * 0.1 + 's' }}></div>
-                            ))}
-                        </div>
-                    ) : (
-                        <Mic size={24} />
-                    )}
-                </button>
 
-                {/* Secondary Actions */}
-                <div className="flex items-center space-x-6">
-                    <div className="px-3 py-1 bg-black/40 border border-white/10 rounded-md text-xs font-mono text-white/50">
-                        会话时长: {formatDuration(durationSeconds)}
-                    </div>
-                    
-                    <button 
-                        onClick={handleSaveMemory}
-                        className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-blue-900/40 to-transparent border border-blue-500/30 rounded-full hover:border-blue-400/80 hover:bg-blue-900/20 transition-all group"
-                    >
-                        <span className="text-sm font-light text-blue-100/90 group-hover:text-white">结晶知识 (Save)</span>
-                        <ChevronRight size={14} className="text-blue-200/50 group-hover:translate-x-1 transition-transform" />
-                    </button>
+              {/* Main Mic Button */}
+              <button
+                onClick={toggleRecording}
+                disabled={isConnecting}
+                className={`
+                        w-16 h-16 rounded-full flex items-center justify-center border transition-all duration-500 relative
+                        ${isConnected
+                    ? 'bg-white text-black border-transparent scale-110 shadow-[0_0_30px_rgba(100,200,255,0.4)]'
+                    : 'bg-black/40 text-white border-white/20 hover:bg-white/10 hover:border-white/50'}
+                    `}
+                style={{
+                  boxShadow: isConnected ? `0 0 30px ${selectedPersona.color}66` : undefined
+                }}
+              >
+                {isConnecting ? (
+                  <Loader2 size={24} className="animate-spin text-white/70" />
+                ) : isConnected ? (
+                  <div className="flex space-x-1 items-center h-4">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="w-1 bg-black animate-bounce" style={{ height: 10 + Math.random() * 10 + 'px', animationDelay: i * 0.1 + 's' }}></div>
+                    ))}
+                  </div>
+                ) : (
+                  <Mic size={24} />
+                )}
+              </button>
+
+              {/* Secondary Actions */}
+              <div className="flex items-center space-x-6">
+                <div className="px-3 py-1 bg-black/40 border border-white/10 rounded-md text-xs font-mono text-white/50">
+                  会话时长: {formatDuration(durationSeconds)}
                 </div>
+
+                <button
+                  onClick={handleSaveMemory}
+                  className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-blue-900/40 to-transparent border border-blue-500/30 rounded-full hover:border-blue-400/80 hover:bg-blue-900/20 transition-all group"
+                >
+                  <span className="text-sm font-light text-blue-100/90 group-hover:text-white">结晶知识 (Save)</span>
+                  <ChevronRight size={14} className="text-blue-200/50 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
             </div>
 
             {/* Settings Toggle */}
-            <button 
-                onClick={() => setShowControls(!showControls)}
-                className="absolute right-8 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/20 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:border-white/40 transition-all pointer-events-auto"
+            <button
+              onClick={() => setShowControls(!showControls)}
+              className="absolute right-8 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/20 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:border-white/40 transition-all pointer-events-auto"
             >
-                <Settings2 size={18} />
+              <Settings2 size={18} />
             </button>
           </motion.div>
         )}
 
         {/* Persona Selector Modal */}
         {showPersonaSelector && (
-            <motion.div
-                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                 className="absolute inset-0 z-50"
-            >
-                <PersonaSelector 
-                    personas={PERSONAS}
-                    selectedPersona={selectedPersona}
-                    onSelect={handlePersonaSelect}
-                    onClose={() => setShowPersonaSelector(false)}
-                />
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50"
+          >
+            <PersonaSelector
+              personas={PERSONAS}
+              selectedPersona={selectedPersona}
+              onSelect={handlePersonaSelect}
+              onClose={() => setShowPersonaSelector(false)}
+            />
           </motion.div>
         )}
 
         {/* Loading/Saving Screen */}
         {mode === AppMode.SAVING && (
-            <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center"
-            >
-                <div className="w-20 h-20 relative">
-                     <div className="absolute inset-0 border-t-2 border-blue-400 rounded-full animate-spin"></div>
-                     <div className="absolute inset-2 border-r-2 border-purple-400 rounded-full animate-spin-reverse"></div>
-                </div>
-                <h2 className="text-xl font-serif italic text-white mt-8 animate-pulse tracking-widest">正在评估运动法则...</h2>
-                <p className="text-xs font-mono text-white/30 mt-2">计算评分中</p>
-            </motion.div>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center"
+          >
+            <div className="w-20 h-20 relative">
+              <div className="absolute inset-0 border-t-2 border-blue-400 rounded-full animate-spin"></div>
+              <div className="absolute inset-2 border-r-2 border-purple-400 rounded-full animate-spin-reverse"></div>
+            </div>
+            <h2 className="text-xl font-serif italic text-white mt-8 animate-pulse tracking-widest">正在评估运动法则...</h2>
+            <p className="text-xs font-mono text-white/30 mt-2">计算评分中</p>
+          </motion.div>
         )}
 
         {/* Controls Panel */}
         {showControls && (
-             <motion.div
-                initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-                className="absolute right-0 top-0 h-full z-50"
-             >
-                <ControlPanel 
-                    settings={particleSettings} 
-                    onChange={(k, v) => setParticleSettings(prev => ({ ...prev, [k]: v }))}
-                    onClose={() => setShowControls(false)}
-                />
-             </motion.div>
+          <motion.div
+            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+            className="absolute right-0 top-0 h-full z-50"
+          >
+            <ControlPanel
+              settings={particleSettings}
+              onChange={(k, v) => setParticleSettings(prev => ({ ...prev, [k]: v }))}
+              onClose={() => setShowControls(false)}
+            />
+          </motion.div>
         )}
 
         {/* Gallery */}
         {mode === AppMode.GALLERY && (
-             <motion.div
-                initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }}
-                className="absolute inset-0 z-50"
-             >
-                <MemoryGallery memories={memories} onClose={() => setMode(AppMode.CHAT)} />
-             </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }}
+            className="absolute inset-0 z-50"
+          >
+            <MemoryGallery memories={memories} onClose={() => setMode(AppMode.CHAT)} />
+          </motion.div>
         )}
       </AnimatePresence>
 
