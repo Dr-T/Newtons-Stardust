@@ -129,19 +129,23 @@ const Layout = ({ children, activeView, setView, userRole, setUserRole }: {
   setUserRole: (r: 'student' | 'teacher') => void
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col h-screen bg-slate-950 text-white font-sans overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 bg-slate-900/50 backdrop-blur-md border-b border-white/10 z-[60] relative">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 hover:opacity-80 hover:scale-105 transition-all cursor-pointer group"
+        >
+          <div className="w-8 h-8 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center group-hover:shadow-lg group-hover:shadow-cyan-500/30 transition-shadow">
             <Atom className="w-5 h-5 text-white animate-spin" style={{ animationDuration: '3s' }} />
           </div>
           <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">
-            Eureka <span className="text-xs text-slate-400 font-normal tracking-wider">真理之眼</span>
+            Eureka <span className="text-xs text-slate-400 font-normal tracking-wider group-hover:text-cyan-400 transition-colors ml-2">AI 认知伴侣</span>
           </span>
-        </div>
+        </button>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
             <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
@@ -570,41 +574,58 @@ const PracticeView = ({ questions, setQuestions, goBack, onFinish }: any) => {
 };
 
 // 4. Chat View (Socratic AI)
+// 4. Chat View (Socratic AI)
+import { useGeminiChat } from './hooks/useGeminiChat';
+
 const ChatView = () => {
-  const [messages, setMessages] = useState([
-    { role: 'ai', content: '你好小明！我是艾萨克·牛顿。关于“万有引力”，你有什么想问我的吗？' }
-  ]);
+  const systemInstruction = `
+    ROLE: 你是艾萨克·牛顿爵士 (Sir Isaac Newton)。
+    CONTEXT: 你正在辅导一名现代高中生学习物理。
+    TONE: 威严、睿智、略带傲慢但富有启发性。你说话时喜欢引用自己的著作《自然哲学的数学原理》，或者提及你的苹果树。
+    
+    INSTRUCTIONS:
+    1. 始终使用第一人称“我”。
+    2. 回答物理问题时，不要直接给出答案，而是采用苏格拉底提问法引导学生思考。
+    3. 如果学生问关于万有引力的问题，强调这是宇宙的真理，是你站在巨人肩膀上的发现。
+    4. 语言风格：混合一些古典的语气（如“年轻人”、“自然界”），但必须用简体中文交流。
+    5. 保持回复简短精炼，不要长篇大论。
+
+    回复风格参考：
+    1. 万有引力是宇宙中任何两个物体之间存在的相互吸引力。它的公式是 F = G(Mm/r²)，意味着质量越大、距离越近，引力就越大。我就被苹果砸中过，从而顿悟了这个道理。
+    2. 开普勒是我的前辈，他发现了行星运动的三大定律。其中第三定律告诉我们 T²/R³ = k，这为我推导万有引力定律奠定了基础。
+    3. 引力常量 G = 6.67×10⁻¹¹ N·m²/kg²，它是卡文迪许后来用扭秤实验测出来的。记得在计算天体质量时，这个常量非常关键。
+    4. 这个问题很有趣。你可以试着站在巨人的肩膀上思考看看，或者问问我关于苹果和月亮的关系？
+  `;
+
+  // Use API Key from environment
+  const { messages, sendMessage, isLoading, error, setMessages } = useGeminiChat(process.env.GEMINI_API_KEY, systemInstruction);
+
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Initial Greeting
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages]);
+    if (messages.length === 0) {
+      setMessages([
+        { role: 'model', content: '你好，年轻的求知者！我是艾萨克·牛顿。关于自然界的奥秘，尤其是那牵引万物的引力，你有什么困惑吗？' }
+      ]);
+    }
+  }, []); // Run once on mount
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      // Smooth scroll to bottom when messages change
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [messages, isLoading]);
 
   const handleSend = () => {
-    if (!input.trim()) return;
-    const userMsg = input;
-    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    if (!input.trim() || isLoading) return;
+    sendMessage(input);
     setInput('');
-    setIsTyping(true);
-
-    // Simple Rule-based response for Demo
-    setTimeout(() => {
-      let aiResponse = '';
-      if (userMsg.includes('引力') && (userMsg.includes('什么') || userMsg.includes('定义'))) {
-        aiResponse = '万有引力是宇宙中任何两个物体之间存在的相互吸引力。它的公式是 F = G(Mm/r²)，意味着质量越大、距离越近，引力就越大。我就被苹果砸中过，从而顿悟了这个道理。';
-      } else if (userMsg.includes('开普勒') || userMsg.includes('定律')) {
-        aiResponse = '开普勒是我的前辈，他发现了行星运动的三大定律。其中第三定律告诉我们 T²/R³ = k，这为我推导万有引力定律奠定了基础。';
-      } else if (userMsg.includes('公式') || userMsg.includes('G')) {
-        aiResponse = '引力常量 G = 6.67×10⁻¹¹ N·m²/kg²，它是卡文迪许后来用扭秤实验测出来的。记得在计算天体质量时，这个常量非常关键。';
-      } else {
-        aiResponse = '这个问题很有趣。你可以试着站在巨人的肩膀上思考看看，或者问问我关于苹果和月亮的关系？';
-      }
-
-      setMessages(prev => [...prev, { role: 'ai', content: aiResponse }]);
-      setIsTyping(false);
-    }, 1500);
   };
 
   return (
@@ -613,10 +634,10 @@ const ChatView = () => {
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`flex gap-3 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${m.role === 'ai' ? 'bg-indigo-600' : 'bg-slate-700'}`}>
-                {m.role === 'ai' ? <Atom className="w-4 h-4 text-white" /> : <User className="w-4 h-4 text-white" />}
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${m.role === 'model' ? 'bg-indigo-600' : 'bg-slate-700'}`}>
+                {m.role === 'model' ? <Atom className="w-4 h-4 text-white" /> : <User className="w-4 h-4 text-white" />}
               </div>
-              <div className={`p-3 rounded-2xl text-sm leading-relaxed ${m.role === 'ai'
+              <div className={`p-3 rounded-2xl text-sm leading-relaxed ${m.role === 'model'
                 ? 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700'
                 : 'bg-cyan-600 text-white rounded-tr-none'
                 }`}>
@@ -625,7 +646,9 @@ const ChatView = () => {
             </div>
           </div>
         ))}
-        {isTyping && (
+
+        {/* Loading Indicator */}
+        {isLoading && (
           <div className="flex justify-start">
             <div className="flex gap-3 max-w-[85%]">
               <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
@@ -639,7 +662,17 @@ const ChatView = () => {
             </div>
           </div>
         )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="flex justify-center my-2">
+            <span className="text-xs text-rose-400 bg-rose-900/20 px-2 py-1 rounded border border-rose-500/30">
+              连接断开: {error}
+            </span>
+          </div>
+        )}
       </div>
+
       <div className="p-4 bg-slate-900 border-t border-white/5">
         <div className="flex gap-2">
           <input
@@ -647,10 +680,15 @@ const ChatView = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="向艾萨克·牛顿提问..."
-            className="flex-1 bg-slate-800 border border-slate-700 rounded-full px-4 py-3 text-white focus:border-cyan-500 outline-none placeholder-slate-500"
+            disabled={isLoading}
+            placeholder={isLoading ? "牛顿正在思考..." : "向艾萨克·牛顿提问..."}
+            className="flex-1 bg-slate-800 border border-slate-700 rounded-full px-4 py-3 text-white focus:border-cyan-500 outline-none placeholder-slate-500 disabled:opacity-50"
           />
-          <button onClick={handleSend} className="w-12 h-12 bg-cyan-600 hover:bg-cyan-500 rounded-full flex items-center justify-center transition-colors">
+          <button
+            onClick={handleSend}
+            disabled={isLoading || !input.trim()}
+            className="w-12 h-12 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-full flex items-center justify-center transition-colors"
+          >
             <Send className="w-5 h-5 text-white" />
           </button>
         </div>
