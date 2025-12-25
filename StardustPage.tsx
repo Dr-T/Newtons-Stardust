@@ -275,8 +275,14 @@ export default function StardustPage() {
         setTimeout(() => navigate('/app', { state: { view: 'gallery' } }), 1500);
         return;
       }
-      const baseUrl = (import.meta as any).env.VITE_GEMINI_BASE_URL;
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY, baseUrl } as any);
+      const baseUrl = (import.meta as any).env.VITE_GEMINI_BASE_URL || "https://generativelanguage.googleapis.com";
+      const ai = new GoogleGenAI({
+        apiKey: import.meta.env.VITE_GEMINI_API_KEY,
+        httpOptions: {
+          baseUrl: baseUrl,
+          apiVersion: 'v1beta'
+        }
+      } as any);
       const model = "gemini-3-flash-preview";
 
       const prompt = `
@@ -291,7 +297,7 @@ export default function StardustPage() {
              - 'formulaUnderstanding': 对 F=Gmm/r^2 和 R^3/T^2=k 的掌握。
              - 'logicRigor': 解释行星运动的逻辑严密性。
              - 'application': 应用到卫星速度/实例的能力。
-          2. 提供 'advice': 一条具体的、可落地的后续学习建议（包含推荐的习题类型、复习重点或思维实验）。
+          2. 提供 'advice': 一条具体的、可落地的后续学习建议（包含对话内容评价、推荐的习题类型、复习重点或思维实验）。
           3. 生成 'title': 有创意的宇宙主题标题 (例如 "万有引力：真理的椭圆")。
           4. 生成 'content': 一段简短、诗意的总结 (严格使用简体中文, 最多50字)。
 

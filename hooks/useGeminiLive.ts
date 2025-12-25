@@ -74,7 +74,7 @@ export const useGeminiLive = (apiKey: string | undefined, onMessage: (text: stri
         setHistory([]); // Reset history on new connection
         transcriptRef.current = { user: '', model: '' };
 
-        const baseUrl = (import.meta as any).env.VITE_GEMINI_BASE_URL;
+        const baseUrl = (import.meta as any).env.VITE_GEMINI_BASE_URL || "https://generativelanguage.googleapis.com";
         console.log("Initializing Gemini Live with Base URL:", baseUrl);
         const ai = new GoogleGenAI({
             apiKey,

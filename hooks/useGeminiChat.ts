@@ -30,7 +30,7 @@ export const useGeminiChat = (apiKey: string | undefined, systemInstruction: str
         setMessages(currentHistory);
 
         try {
-            const baseUrl = (import.meta as any).env.VITE_GEMINI_BASE_URL;
+            const baseUrl = (import.meta as any).env.VITE_GEMINI_BASE_URL || "https://generativelanguage.googleapis.com";
             const client = new GoogleGenAI({
                 apiKey,
                 httpOptions: {
