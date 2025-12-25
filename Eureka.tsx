@@ -598,7 +598,7 @@ const ChatView = () => {
   `;
 
   // Use API Key from environment
-  const { messages, sendMessage, isLoading, error, setMessages } = useGeminiChat(process.env.GEMINI_API_KEY, systemInstruction);
+  const { messages, sendMessage, isLoading, error, setMessages } = useGeminiChat(import.meta.env.VITE_GEMINI_API_KEY, systemInstruction);
 
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
