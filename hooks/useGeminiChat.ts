@@ -31,7 +31,13 @@ export const useGeminiChat = (apiKey: string | undefined, systemInstruction: str
 
         try {
             const baseUrl = (import.meta as any).env.VITE_GEMINI_BASE_URL;
-            const client = new GoogleGenAI({ apiKey, baseURL: baseUrl, apiEndpoint: baseUrl } as any);
+            const client = new GoogleGenAI({
+                apiKey,
+                httpOptions: {
+                    baseUrl: baseUrl,
+                    apiVersion: 'v1beta'
+                }
+            } as any);
 
             const apiContents = currentHistory.map(m => ({
                 role: m.role,
