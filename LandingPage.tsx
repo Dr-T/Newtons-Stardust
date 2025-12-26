@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Atom, Brain, Target, MessageSquare, Zap, Play, Repeat, CheckCircle2, ChevronRight, User, Users, GraduationCap, Layers, BrainCircuit, MessageCircle, Microscope, Rocket, ArrowRight, BookOpen, Tablet, Bot, BarChart3, Phone } from './components/Icons';
+import { Atom, Brain, Target, MessageSquare, Zap, Play, Repeat, CheckCircle2, ChevronRight, User, Users, GraduationCap, Layers, BrainCircuit, MessageCircle, Microscope, Rocket, ArrowRight, BookOpen, Tablet, Bot, BarChart3, Phone, XCircle } from './components/Icons';
 
 
 
@@ -52,6 +52,7 @@ const LandingPage = () => {
                         <a href="#lesson" className="hover:text-white transition-colors">精品课例</a>
                         <a href="#companion" className="hover:text-white transition-colors">思维伙伴</a>
                         <a href="#tech" className="hover:text-white transition-colors">技术亮点</a>
+                        <a href="#competitor" className="hover:text-white transition-colors">竞品分析</a>
                         <a href="#scenarios" className="hover:text-white transition-colors">商业前景</a>
                     </div>
 
@@ -74,6 +75,7 @@ const LandingPage = () => {
                 </div>
             </header>
 
+
             {/* Hero Section */}
             <section className="relative pt-40 pb-32 px-6 overflow-hidden">
                 <div className="max-w-5xl mx-auto text-center relative z-10">
@@ -88,6 +90,43 @@ const LandingPage = () => {
                     <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-in-up delay-200">
                         Eureka 是基于<b> 费曼学习法 </b>与 <b>Agentic UI</b> 的 <span className="text-white font-bold">AI 认知伴侣。</span><br />通过智能诊断、交互深潜和角色互换，构建从“假懂”到“真知”的认知闭环。
                     </p>
+                    {/* Stats Row */}
+                    <div className="mb-16 pt-4 grid grid-cols-3 gap-2 md:gap-12 animate-fade-in-up delay-300">
+                        <div className="flex flex-col items-center">
+                            <div className="text-3xl md:text-5xl font-bold text-white mb-2 font-mono">
+                                4<span className="text-lg md:text-1xl ml-1 text-slate-500 font-sans">类</span>
+                            </div>
+                            <div className="text-sm md:text-base font-bold text-cyan-400 mb-1">交互模态</div>
+                            <div className="text-[10px] md:text-xs text-slate-500 uppercase tracking-wider flex flex-col gap-1 opacity-80">
+                                <span>眼：手写公式识别</span>
+                                <span>手：AI 接管界面</span>
+                                <span>耳：实时倾听语音</span>
+                                <span>口：反讲追问探究</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-center border-l border-white/5">
+                            <div className="text-3xl md:text-5xl font-bold text-white mb-2 font-mono">
+                                3<span className="text-lg md:text-1xl ml-1 text-slate-500 font-sans">大</span>
+                            </div>
+                            <div className="text-sm md:text-base font-bold text-indigo-400 mb-1">AI Agent</div>
+                            <div className="text-[10px] md:text-xs text-slate-500 uppercase tracking-wider flex flex-col gap-1 opacity-80">
+                                <span>测：诊断助教</span>
+                                <span>教：GUI 导师</span>
+                                <span>验：费曼小白</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-center border-l border-white/5">
+                            <div className="text-3xl md:text-5xl font-bold text-white mb-2 font-mono">
+                                3<span className="text-lg md:text-1xl ml-1 text-slate-500 font-sans">种</span>
+                            </div>
+                            <div className="text-sm md:text-base font-bold text-purple-400 mb-1">科学学习法</div>
+                            <div className="text-[10px] md:text-xs text-slate-500 uppercase tracking-wider flex flex-col gap-1 opacity-80">
+                                <span>艾宾浩斯遗忘曲线</span>
+                                <span>费曼学习法</span>
+                                <span>认知负荷理论</span>
+                            </div>
+                        </div>
+                    </div>
                     <div className="flex flex-col md:flex-row items-center justify-center gap-4">
                         <button
                             onClick={() => navigate('/app')}
@@ -100,6 +139,7 @@ const LandingPage = () => {
                             观看概念视频
                         </button>
                     </div>
+
                 </div>
 
                 {/* Star Overlay */}
@@ -390,6 +430,80 @@ const LandingPage = () => {
                         </div>
 
                     </div>
+                </div>
+            </section>
+
+            {/* Competitive Landscape */}
+            <section id="competitor" className="py-24 bg-slate-900/50 border-t border-white/5 scroll-mt-16">
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl font-bold text-white mb-4">
+                            竞品分析
+                        </h2>
+                        <p className="text-slate-400">Eureka 不做“题海战术”的搬运工，也不做“从零开始”的讲课老师。Eureka 专注做 <span className="text-transparent bg-clip-text bg-gradient-to-r text-white">“课后到考前”</span>的那一公里</p>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-8 items-stretch">
+                        {/* Left: What We Are Good At */}
+                        <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-3xl p-8 flex flex-col">
+                            <h3 className="text-cyan-400 text-xl font-bold mb-6 flex items-center gap-2">
+                                <CheckCircle2 className="w-6 h-6" />
+                                Eureka 擅长
+                            </h3>
+                            <div className="flex flex-col gap-6">
+                                <div>
+                                    <h4 className="text-white text-lg font-bold mb-2">破解“元认知错觉”</h4>
+                                    <p className="text-slate-400">学生自以为懂了，但反讲卡壳。Eureka 立刻捕捉逻辑断点，判定“未掌握”。</p>
+                                </div>
+                                <div>
+                                    <h4 className="text-white text-lg font-bold mb-2">抽象概念“可视化”</h4>
+                                    <p className="text-slate-400">擅用直觉，用微观粒子容器讲“1mol 氧气”、用模拟发射卫星讲“万有引力”。</p>
+                                </div>
+                                <div>
+                                    <h4 className="text-white text-lg font-bold mb-2">精准的“防遗忘”管理</h4>
+                                    <p className="text-slate-400">拒绝题海战术。基于 6+4 策略与艾宾浩斯曲线，只推“马上要忘”的那道题。</p>
+                                </div>
+                                <div>
+                                    <h4 className="text-white text-lg font-bold mb-2">极强的情绪价值</h4>
+                                    <p className="text-slate-400">AI 可以是“笨蛋小白”也可以是“严谨牛顿”，利用胜负欲与表现欲驱动学习。</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right: What We Are NOT Good At */}
+                        <div className="bg-rose-500/5 border border-rose-500/20 rounded-3xl p-8 flex flex-col">
+                            <h3 className="text-rose-400 text-xl font-bold mb-6 flex items-center gap-2">
+                                <XCircle className="w-6 h-6" />
+                                Eureka 不擅长
+                            </h3>
+                            <div className="flex flex-col gap-6">
+                                <div>
+                                    <h4 className="text-slate-300 text-lg font-bold mb-2">零基础系统授课</h4>
+                                    <p className="text-slate-400 mb-2">Eureka 不擅长从0到1的知识讲授，若无概念雏形，费曼反讲会受挫。</p>
+                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 text-slate-400 text-sm">
+                                        <ArrowRight className="w-4 h-4" />
+                                        推荐：<strong className="text-slate-300">学而思网校</strong>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="text-slate-300 text-lg font-bold mb-2">海量刷题与搜题</h4>
+                                    <p className="text-slate-400 mb-3">Eureka 不擅长高强度的题量与速度训练，不提供直接的答案搜索。</p>
+                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 text-slate-400 text-sm">
+                                        <ArrowRight className="w-4 h-4" />
+                                        推荐：<strong className="text-slate-300">猿题库、作业帮</strong>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="text-slate-300 text-lg font-bold mb-2">文科主观题批改</h4>
+                                    <p className="text-slate-400 mb-2">Eureka 专精于理科逻辑链，暂不覆盖作文/政治等主观题。</p>
+                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 text-slate-400 text-sm">
+                                        <ArrowRight className="w-4 h-4" />
+                                        推荐：<strong className="text-slate-300">批改网、阅卷星</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </section>
 
